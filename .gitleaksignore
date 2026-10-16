@@ -8,3 +8,12 @@ submissions/12-kubernetes-config-ingress/04-troubleshooting/postgres.yaml:kubern
 submissions/12-kubernetes-config-ingress/04-troubleshooting/fixed-client-secret.yaml:kubernetes-secret-yaml:3
 submissions/12-kubernetes-config-ingress/04-troubleshooting/broken-client-secret.yaml:kubernetes-secret-yaml:4
 submissions/12-kubernetes-config-ingress/04-troubleshooting/broken-client-secret.yaml:generic-api-key:10
+
+# Session 16: the image tag contains the public git commit SHA (s16-gear-api:<sha>), which the
+# generic-api-key rule mistakes for a key. It is not a secret.
+82027b90119d177f72b47e8c790000058fed9b71:submissions/16-cicd/README.md:generic-api-key:81
+82027b90119d177f72b47e8c790000058fed9b71:submissions/16-cicd/outputs/github-actions-run-38961008859.txt:generic-api-key:27
+82027b90119d177f72b47e8c790000058fed9b71:submissions/16-cicd/outputs/github-actions-run-38961008859.txt:generic-api-key:37
+submissions/16-cicd/README.md:generic-api-key:81
+submissions/16-cicd/outputs/github-actions-run-38961008859.txt:generic-api-key:27
+submissions/16-cicd/outputs/github-actions-run-38961008859.txt:generic-api-key:37
