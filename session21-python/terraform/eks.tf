@@ -25,6 +25,32 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.public_subnets
 
+  # Only used when the account can't create load balancers: lets the listed
+  # IPs reach the ingress-nginx NodePort (30080) on the nodes' public IPs.
+  # Empty list (the default) = no extra rule at all.
+  node_security_group_additional_rules = merge({
+    # Node-to-node on port 80: ingress-nginx listens on 80 inside its Pod, and traffic
+    # that lands on another node is forwarded to it. The module's default node-to-node
+    # rule only covers ports 1025-65535.
+    nodes_to_ingress_pod_http = {
+      description = "Node to node, ingress-nginx Pod port 80"
+      protocol    = "tcp"
+      from_port   = 80
+      to_port     = 80
+      type        = "ingress"
+      self        = true
+    }
+    }, length(var.ingress_allowed_cidrs) == 0 ? {} : {
+    ingress_nodeport_http = {
+      description = "ingress-nginx HTTP NodePort from allowed IPs only"
+      protocol    = "tcp"
+      from_port   = 30080
+      to_port     = 30080
+      type        = "ingress"
+      cidr_blocks = var.ingress_allowed_cidrs
+    }
+  })
+
   addons = {
     # These two must be ready before nodes join.
     vpc-cni = {

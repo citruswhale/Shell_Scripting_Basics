@@ -1,0 +1,33 @@
+$ curl -s -o /dev/null -w '%{http_code}' http://13.232.136.172:30080/      # from my laptop, over the internet, through ingress-nginx on EKS
+200
+$ curl -s http://13.232.136.172:30080/api/info
+{"name":"GearLoan","version":"1.0.0-8ea89f2"}
+$ curl -s http://13.232.136.172:30080/api/health; curl -s http://13.232.136.172:30080/api/ready
+{"status":"ok"}
+{"status":"ready"}
+
+$ kubectl get pods -n gearloan
+NAME                                 READY   STATUS    RESTARTS   AGE
+gearloan-backend-97dd9f7b7-58wsj     1/1     Running   0          36m
+gearloan-backend-97dd9f7b7-j2dfx     1/1     Running   0          36m
+gearloan-frontend-77c5dd497b-rf7m4   1/1     Running   0          36m
+gearloan-frontend-77c5dd497b-tdl7v   1/1     Running   0          36m
+gearloan-postgres-0                  1/1     Running   0          56m
+
+$ kubectl get svc,ingress -n gearloan
+NAME                        TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/gearloan-backend    ClusterIP   172.20.9.100   <none>        8000/TCP   56m
+service/gearloan-frontend   ClusterIP   172.20.122.9   <none>        8080/TCP   56m
+service/gearloan-postgres   ClusterIP   None           <none>        5432/TCP   56m
+
+NAME                                 CLASS   HOSTS   ADDRESS         PORTS   AGE
+ingress.networking.k8s.io/gearloan   nginx   *       172.20.232.67   80      56m
+
+$ kubectl get hpa -n gearloan
+NAME                REFERENCE                      TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+gearloan-backend    Deployment/gearloan-backend    cpu: 12%/70%   2         5         2          56m
+gearloan-frontend   Deployment/gearloan-frontend   cpu: 2%/70%    2         5         2          56m
+
+$ kubectl get svc -n ingress-nginx ingress-nginx-controller
+NAME                       TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+ingress-nginx-controller   NodePort   172.20.232.67   <none>        80:30080/TCP,443:30415/TCP   60m

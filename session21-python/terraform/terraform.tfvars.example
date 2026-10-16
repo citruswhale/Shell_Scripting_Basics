@@ -8,3 +8,6 @@ node_min_size      = 2
 node_max_size      = 3
 node_desired_size  = 2
 node_disk_size     = 20
+
+# Only if the account cannot create load balancers, e.g. ["203.0.113.10/32"] (your own IP)
+# ingress_allowed_cidrs = []

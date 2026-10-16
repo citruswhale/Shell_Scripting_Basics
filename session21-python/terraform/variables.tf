@@ -60,3 +60,9 @@ variable "node_disk_size" {
   type        = number
   default     = 20
 }
+
+variable "ingress_allowed_cidrs" {
+  description = "IPs (CIDR) allowed to reach the ingress NodePort 30080 directly. Leave empty when a load balancer is used."
+  type        = list(string)
+  default     = []
+}

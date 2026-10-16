@@ -300,3 +300,30 @@ public_subnet_ids = [
 region = "ap-south-1"
 storage_note = "EBS CSI driver is installed. Create a gp3 default StorageClass and install metrics-server with kubectl/Helm after the cluster is up. Delete LoadBalancer Services and PVCs before terraform destroy."
 vpc_id = "vpc-0dacaeed889bf7dd8"
+
+# ---- account cannot create load balancers yet: open the ingress NodePort 30080 to my IP only ----
+$ terraform apply -no-color tfplan
+module.eks.aws_security_group_rule.node["ingress_nodeport_http"]: Creating...
+module.eks.aws_security_group_rule.node["ingress_nodeport_http"]: Creation complete after 2s [id=sgrule-2609675580]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+cluster_endpoint = "https://279562B84E0B98D9B76B0C92CE9D56EB.gr7.ap-south-1.eks.amazonaws.com"
+cluster_name = "gearloan-eks"
+configure_kubectl = "aws eks update-kubeconfig --region ap-south-1 --name gearloan-eks --profile devops-lab"
+node_group_name = "gearloan-eks:default-301e921cb5ae6ce52bfb25489b"
+public_subnet_ids = [
+  "subnet-0fa6882b0aec6d397",
+  "subnet-0f511b368ebcfe1d3",
+]
+region = "ap-south-1"
+storage_note = "EBS CSI driver is installed. Create a gp3 default StorageClass and install metrics-server with kubectl/Helm after the cluster is up. Delete LoadBalancer Services and PVCs before terraform destroy."
+vpc_id = "vpc-0dacaeed889bf7dd8"
+
+# ---- cross-node traffic to the ingress Pod on port 80 was blocked: add a node-to-node TCP 80 rule ----
+$ terraform apply -no-color tfplan
+module.eks.aws_security_group_rule.node["nodes_to_ingress_pod_http"]: Creating...
+module.eks.aws_security_group_rule.node["nodes_to_ingress_pod_http"]: Creation complete after 2s [id=sgrule-3596980260]
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
