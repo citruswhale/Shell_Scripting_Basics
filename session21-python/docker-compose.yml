@@ -1,0 +1,61 @@
+# GearLoan local stack: Postgres + FastAPI backend + nginx/React frontend.
+# Usage:  cp .env.example .env   (then edit)   and   docker compose up --build -d
+# App:    http://localhost:3000
+name: gearloan
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gearloan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-gearloan}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Not published on the host; only the backend talks to it.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    image: gearloan-backend:local
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-gearloan}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gearloan}
+      APP_VERSION: ${APP_VERSION:-1.0.0}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=2).status == 200 else 1)"
+      interval: 10s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    image: gearloan-frontend:local
+    environment:
+      BACKEND_UPSTREAM: backend:8000
+      NGINX_RESOLVER: 127.0.0.11
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
