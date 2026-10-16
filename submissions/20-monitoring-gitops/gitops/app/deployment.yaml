@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gear-status
+  namespace: s20-gitops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gear-status
+  template:
+    metadata:
+      labels:
+        app: gear-status
+    spec:
+      containers:
+        - name: web
+          image: hashicorp/http-echo:1.0
+          args: ["-listen=:8080", "-text=GearLoan status page - version 1 (deployed by Argo CD)"]
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 50m, memory: 32Mi }
