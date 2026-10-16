@@ -1,0 +1,19 @@
+{{- if .Values.postgres.enabled }}
+# Headless service for the StatefulSet. The backend connects to this name.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gearloan.postgres.fullname" . }}
+  labels:
+    {{- include "gearloan.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  clusterIP: None
+  selector:
+    {{- include "gearloan.selectorLabels" (dict "ctx" . "component" "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+{{- end }}

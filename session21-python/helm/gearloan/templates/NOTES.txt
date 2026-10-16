@@ -1,0 +1,28 @@
+GearLoan {{ include "gearloan.backend.appVersion" . }} is deployed in namespace {{ .Release.Namespace }}.
+
+Check the pods:
+  kubectl get pods,svc,ingress,hpa,pvc -n {{ .Release.Namespace }}
+
+{{- if .Values.ingress.enabled }}
+
+Open the app:
+{{- if .Values.ingress.host }}
+  http://{{ .Values.ingress.host }}/          (UI)
+  http://{{ .Values.ingress.host }}/api/info  (API)
+  On minikube add "<minikube ip> {{ .Values.ingress.host }}" to /etc/hosts,
+  or: kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8090:80
+      curl -H "Host: {{ .Values.ingress.host }}" http://127.0.0.1:8090/api/info
+{{- else }}
+  Use the ingress controller address: kubectl get ingress -n {{ .Release.Namespace }}
+{{- end }}
+{{- else }}
+
+Port-forward the frontend:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "gearloan.frontend.fullname" . }} 8080:{{ .Values.frontend.port }}
+{{- end }}
+
+{{- if not .Values.postgres.existingSecret }}
+
+Database password (generated on first install unless postgres.password was set):
+  kubectl get secret {{ include "gearloan.postgres.secretName" . }} -n {{ .Release.Namespace }} -o jsonpath='{.data.postgres-password}' | base64 -d
+{{- end }}

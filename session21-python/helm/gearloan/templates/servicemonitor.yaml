@@ -1,0 +1,25 @@
+{{- if .Values.serviceMonitor.enabled }}
+# Tells Prometheus (kube-prometheus-stack) to scrape backend /metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "gearloan.backend.fullname" . }}
+  labels:
+    {{- include "gearloan.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+    {{- with .Values.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "gearloan.selectorLabels" (dict "ctx" . "component" "backend") | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
+{{- end }}

@@ -1,0 +1,132 @@
+# Default values for the GearLoan chart.
+# Environment specific settings live in values-local.yaml and values-eks.yaml.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Shared image settings. Leave registry empty to use plain local image names.
+image:
+  registry: ghcr.io/citruswhale
+  pullPolicy: IfNotPresent
+
+# e.g. [{name: ghcr-pull}] if the GHCR packages are private
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# Applied to every pod: no root, default seccomp profile
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Applied to every container
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+backend:
+  image:
+    repository: gearloan-backend
+    tag: ""          # empty = Chart appVersion
+    pullPolicy: ""   # empty = image.pullPolicy
+  # Shown by /api/info. Empty = Chart appVersion.
+  appVersion: ""
+  replicaCount: 2    # only used when hpa.enabled is false
+  port: 8000
+  runAsUser: 10001   # matches the user in backend/Dockerfile
+  logLevel: info
+  # Only needed if the UI is served from another origin. Same origin via ingress needs nothing.
+  corsOrigins: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  extraEnv: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+frontend:
+  image:
+    repository: gearloan-frontend
+    tag: ""
+    pullPolicy: ""
+  replicaCount: 2
+  port: 8080
+  runAsUser: 101     # nginx user in nginx-unprivileged
+  # DNS server nginx uses to find the backend service at request time
+  nginxResolver: kube-dns.kube-system.svc.cluster.local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+postgres:
+  # Set to false to point the backend at an outside database (RDS etc.) via externalHost
+  enabled: true
+  externalHost: ""
+  image:
+    repository: postgres
+    tag: 17-alpine
+    pullPolicy: IfNotPresent
+  runAsUser: 70      # postgres user in the alpine image
+  user: gearloan
+  database: gearloan
+  # Leave empty: a random password is generated on first install and kept on upgrades.
+  # Or pass one with --set postgres.password=... (letters and digits only, it goes into a URL).
+  password: ""
+  # Use a Secret you created yourself instead (must have key "postgres-password").
+  existingSecret: ""
+  storage:
+    size: 1Gi
+    storageClassName: ""   # empty = cluster default
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""           # empty = any host
+  annotations: {}
+  tls: []            # e.g. [{secretName: gearloan-tls, hosts: [gearloan.example.com]}]
+
+# Needs the Prometheus Operator CRDs (kube-prometheus-stack)
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    release: kube-prometheus-stack

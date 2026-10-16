@@ -1,0 +1,10 @@
+# Files helm package should skip
+.DS_Store
+.git/
+.gitignore
+*.swp
+*.bak
+*.tmp
+.idea/
+.vscode/
+README.md

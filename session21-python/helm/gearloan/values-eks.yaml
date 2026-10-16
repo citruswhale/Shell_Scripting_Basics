@@ -1,0 +1,32 @@
+# EKS: images from GHCR, gp3 EBS volume, ingress-nginx, Prometheus scraping.
+# Used by k8s/argocd/application.yaml.
+
+image:
+  registry: ghcr.io/citruswhale
+  pullPolicy: IfNotPresent
+
+backend:
+  image:
+    tag: ""   # CI sets this to the commit SHA tag; empty = appVersion
+
+frontend:
+  image:
+    tag: ""
+
+postgres:
+  # Argo CD renders with "helm template", where lookup does not work, so a
+  # generated password would change on every sync. Create this Secret once
+  # by hand (see k8s/README.md) and the chart only reads it.
+  existingSecret: gearloan-db
+  storage:
+    size: 5Gi
+    storageClassName: gp3
+
+ingress:
+  className: nginx
+  host: ""    # set to your domain if you have one
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack

@@ -1,0 +1,18 @@
+# Non-secret backend settings. The password lives in the Secret.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "gearloan.backend.fullname" . }}
+  labels:
+    {{- include "gearloan.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+data:
+  PORT: {{ .Values.backend.port | quote }}
+  LOG_LEVEL: {{ .Values.backend.logLevel | quote }}
+  POSTGRES_HOST: {{ include "gearloan.postgres.host" . | quote }}
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: {{ .Values.postgres.database | quote }}
+  POSTGRES_USER: {{ .Values.postgres.user | quote }}
+  {{- with .Values.backend.corsOrigins }}
+  CORS_ORIGINS: {{ . | quote }}
+  {{- end }}

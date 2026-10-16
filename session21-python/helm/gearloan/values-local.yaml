@@ -1,0 +1,23 @@
+# Minikube: images built locally and loaded with "minikube image load".
+# helm upgrade --install gearloan ./helm/gearloan -n gearloan -f ./helm/gearloan/values-local.yaml
+
+image:
+  registry: ""        # plain names like gearloan-backend:local
+  pullPolicy: Never   # never try to pull, the image is already on the node
+
+backend:
+  image:
+    tag: local
+
+frontend:
+  image:
+    tag: local
+
+postgres:
+  storage:
+    size: 1Gi
+    storageClassName: standard   # minikube hostpath
+
+ingress:
+  className: nginx
+  host: gearloan.local
