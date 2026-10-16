@@ -1,0 +1,64 @@
+# Sends realistic traffic to the GearLoan API so the dashboards have something to show.
+# Each loop: add an item, list/search items, lend it, return it, read stats, and ask for
+# a few items that don't exist (404s, to make the error-rate panel move).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-generator
+  namespace: gearloan
+  labels:
+    app: traffic-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-generator
+  template:
+    metadata:
+      labels:
+        app: traffic-generator
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: traffic
+          image: curlimages/curl:8.11.1
+          env:
+            - name: API
+              value: http://gearloan-backend.gearloan.svc.cluster.local:8000/api
+            - name: NOT_FOUND_EVERY
+              value: "4"        # one round of 404s every N loops
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              n=0
+              while true; do
+                n=$((n+1))
+                due=$(date -u -d "@$(( $(date +%s) + 7*86400 ))" +%Y-%m-%d 2>/dev/null || date -u +%Y-%m-%d)
+                item=$(curl -s -X POST "$API/items" -H 'content-type: application/json' \
+                  -d "{\"name\":\"Load test camera $n\",\"category\":\"camera\",\"condition\":\"good\"}" | sed -n 's/.*"id":\([0-9]*\).*/\1/p' | head -1)
+                curl -s -o /dev/null "$API/items?search=camera"
+                curl -s -o /dev/null "$API/items?status=available&category=camera"
+                curl -s -o /dev/null "$API/stats"
+                if [ -n "$item" ]; then
+                  loan=$(curl -s -X POST "$API/loans" -H 'content-type: application/json' \
+                    -d "{\"item_id\":$item,\"borrower_name\":\"Load Tester\",\"borrower_email\":\"load$((n % 50))@example.com\",\"due_date\":\"$due\"}" | sed -n 's/.*"id":\([0-9]*\).*/\1/p' | head -1)
+                  curl -s -o /dev/null "$API/loans?status=active"
+                  [ -n "$loan" ] && curl -s -o /dev/null -X POST "$API/loans/$loan/return" -H 'content-type: application/json' -d '{"condition":"good"}'
+                fi
+                if [ $((n % NOT_FOUND_EVERY)) -eq 0 ]; then
+                  for i in 1 2 3; do curl -s -o /dev/null "$API/items/999999$i"; done
+                fi
+                sleep 1
+              done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

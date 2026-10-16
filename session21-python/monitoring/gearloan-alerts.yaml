@@ -1,0 +1,37 @@
+# Alert rules for the GearLoan backend
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gearloan-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: gearloan
+      rules:
+        - alert: GearLoanBackendDown
+          expr: up{job="gearloan-backend"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "A GearLoan backend Pod is not answering /metrics"
+        - alert: GearLoanHighClientErrorRate
+          # more than 20% of API requests in the last 2 minutes are 4xx (for example lots of "not found")
+          expr: |
+            sum(rate(http_requests_total{job="gearloan-backend", status=~"4.."}[2m]))
+              / sum(rate(http_requests_total{job="gearloan-backend"}[2m])) > 0.2
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Over 20% of GearLoan API requests are failing with 4xx"
+        - alert: GearLoanSlowRequests
+          expr: |
+            histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="gearloan-backend"}[5m]))) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "GearLoan p95 latency is above 500 ms"

@@ -1,0 +1,58 @@
+# Values for prometheus-community/kube-prometheus-stack.
+# Kept small so it runs on a laptop (Minikube) and on 2 small EKS nodes.
+
+# Prometheus: pick up every ServiceMonitor / PrometheusRule that has release=kube-prometheus-stack
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    scrapeInterval: 15s
+    serviceMonitorSelector:
+      matchLabels:
+        release: kube-prometheus-stack
+    ruleSelector:
+      matchLabels:
+        release: kube-prometheus-stack
+    resources:
+      requests: { cpu: 100m, memory: 400Mi }
+      limits: { memory: 1Gi }
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 10m, memory: 32Mi }
+      limits: { memory: 128Mi }
+
+grafana:
+  # admin password is passed at install time (--set grafana.adminPassword=...), never stored in git
+  defaultDashboardsTimezone: browser
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard     # any ConfigMap with this label is loaded as a dashboard
+      searchNamespace: ALL
+  resources:
+    requests: { cpu: 50m, memory: 512Mi }
+    limits: { memory: 1Gi }         # Grafana 13 uses about 650-700Mi; lower limits got it OOMKilled
+
+prometheusOperator:
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+kube-state-metrics:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+
+prometheus-node-exporter:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+
+# these control-plane parts can't be scraped on Minikube/EKS (managed or bound to localhost)
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
