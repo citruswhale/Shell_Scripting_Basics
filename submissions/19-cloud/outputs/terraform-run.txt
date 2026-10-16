@@ -1,0 +1,1348 @@
+$ terraform init -no-color
+Initializing the backend...
+
+Initializing provider plugins...
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Reusing previous version of hashicorp/random from the dependency lock file
+- Using previously-installed hashicorp/aws v6.69.1
+- Using previously-installed hashicorp/random v3.9.1
+
+Terraform has been successfully initialized!
+
+$ terraform fmt -check -recursive && echo "fmt: nothing to change"
+fmt: nothing to change
+
+$ terraform validate -no-color
+Success! The configuration is valid.
+
+
+$ terraform plan -no-color -out=tfplan
+data.aws_availability_zones.available: Reading...
+data.aws_iam_policy_document.ec2_assume: Reading...
+data.aws_ssm_parameter.al2023: Reading...
+data.aws_iam_policy_document.ec2_assume: Read complete after 0s [id=2851119427]
+data.aws_ssm_parameter.al2023: Read complete after 1s [id=/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64]
+data.aws_availability_zones.available: Read complete after 1s [id=ap-south-1]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+ <= read (data resources)
+
+Terraform will perform the following actions:
+
+  # data.aws_iam_policy_document.read_assets will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "read_assets" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "s3:ListBucket",
+            ]
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "ListAssetsBucket"
+        }
+      + statement {
+          + actions   = [
+              + "s3:GetObject",
+            ]
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "ReadAssetsObjects"
+        }
+    }
+
+  # aws_iam_instance_profile.web will be created
+  + resource "aws_iam_instance_profile" "web" {
+      + arn         = (known after apply)
+      + create_date = (known after apply)
+      + id          = (known after apply)
+      + name        = "gearloan-s19-web-profile"
+      + name_prefix = (known after apply)
+      + path        = "/"
+      + role        = "gearloan-s19-web-role"
+      + tags_all    = {
+          + "ManagedBy" = "terraform"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+      + unique_id   = (known after apply)
+    }
+
+  # aws_iam_role.web will be created
+  + resource "aws_iam_role" "web" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRole"
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "ec2.amazonaws.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "gearloan-s19-web-role"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "ManagedBy" = "terraform"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # aws_iam_role_policy.read_assets will be created
+  + resource "aws_iam_role_policy" "read_assets" {
+      + id          = (known after apply)
+      + name        = "read-assets-bucket"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+  # aws_instance.web will be created
+  + resource "aws_instance" "web" {
+      + ami                                  = "ami-04394a3a96907e9ec"
+      + arn                                  = (known after apply)
+      + associate_public_ip_address          = (known after apply)
+      + availability_zone                    = (known after apply)
+      + disable_api_stop                     = (known after apply)
+      + disable_api_termination              = (known after apply)
+      + ebs_optimized                        = (known after apply)
+      + enable_primary_ipv6                  = (known after apply)
+      + force_destroy                        = false
+      + get_password_data                    = false
+      + host_id                              = (known after apply)
+      + host_resource_group_arn              = (known after apply)
+      + iam_instance_profile                 = "gearloan-s19-web-profile"
+      + id                                   = (known after apply)
+      + instance_initiated_shutdown_behavior = (known after apply)
+      + instance_lifecycle                   = (known after apply)
+      + instance_state                       = (known after apply)
+      + instance_type                        = "t3.micro"
+      + ipv6_address_count                   = (known after apply)
+      + ipv6_addresses                       = (known after apply)
+      + key_name                             = (known after apply)
+      + monitoring                           = (known after apply)
+      + outpost_arn                          = (known after apply)
+      + password_data                        = (known after apply)
+      + placement_group                      = (known after apply)
+      + placement_group_id                   = (known after apply)
+      + placement_partition_number           = (known after apply)
+      + primary_network_interface_id         = (known after apply)
+      + private_dns                          = (known after apply)
+      + private_ip                           = (known after apply)
+      + public_dns                           = (known after apply)
+      + public_ip                            = (known after apply)
+      + region                               = "ap-south-1"
+      + secondary_private_ips                = (known after apply)
+      + security_groups                      = (known after apply)
+      + source_dest_check                    = true
+      + spot_instance_request_id             = (known after apply)
+      + subnet_id                            = (known after apply)
+      + tags                                 = {
+          + "Name" = "gearloan-s19-web"
+        }
+      + tags_all                             = {
+          + "ManagedBy" = "terraform"
+          + "Name"      = "gearloan-s19-web"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+      + tenancy                              = (known after apply)
+      + user_data                            = <<-EOT
+            #!/bin/bash
+            set -euxo pipefail
+            
+            dnf install -y nginx
+            
+            # Get the instance id using IMDSv2 (token first, then the metadata call).
+            TOKEN=$(curl -sS -X PUT "http://169.254.169.254/latest/api/token" \
+              -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+            INSTANCE_ID=$(curl -sS -H "X-aws-ec2-metadata-token: $TOKEN" \
+              http://169.254.169.254/latest/meta-data/instance-id)
+            
+            cat > /usr/share/nginx/html/index.html <<HTML
+            <!doctype html>
+            <html>
+              <head><meta charset="utf-8"><title>GearLoan infra demo</title></head>
+              <body>
+                <h1>GearLoan infra demo – Srinidhi Narendran 24BCS10037 – served from EC2 ${INSTANCE_ID}</h1>
+              </body>
+            </html>
+            HTML
+            
+            systemctl enable --now nginx
+        EOT
+      + user_data_base64                     = (known after apply)
+      + user_data_replace_on_change          = true
+      + vpc_security_group_ids               = (known after apply)
+
+      + capacity_reservation_specification (known after apply)
+
+      + cpu_options (known after apply)
+
+      + ebs_block_device (known after apply)
+
+      + enclave_options (known after apply)
+
+      + ephemeral_block_device (known after apply)
+
+      + instance_market_options (known after apply)
+
+      + maintenance_options (known after apply)
+
+      + metadata_options {
+          + http_endpoint               = "enabled"
+          + http_protocol_ipv6          = "disabled"
+          + http_put_response_hop_limit = 1
+          + http_tokens                 = "required"
+          + instance_metadata_tags      = (known after apply)
+        }
+
+      + network_interface (known after apply)
+
+      + primary_network_interface (known after apply)
+
+      + private_dns_name_options (known after apply)
+
+      + root_block_device {
+          + delete_on_termination = true
+          + device_name           = (known after apply)
+          + encrypted             = true
+          + iops                  = (known after apply)
+          + kms_key_id            = (known after apply)
+          + tags_all              = (known after apply)
+          + throughput            = (known after apply)
+          + volume_id             = (known after apply)
+          + volume_size           = 8
+          + volume_type           = "gp3"
+        }
+
+      + secondary_network_interface (known after apply)
+    }
+
+  # aws_internet_gateway.main will be created
+  + resource "aws_internet_gateway" "main" {
+      + arn      = (known after apply)
+      + id       = (known after apply)
+      + owner_id = (known after apply)
+      + region   = "ap-south-1"
+      + tags     = {
+          + "Name" = "gearloan-s19-igw"
+        }
+      + tags_all = {
+          + "ManagedBy" = "terraform"
+          + "Name"      = "gearloan-s19-igw"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+      + vpc_id   = (known after apply)
+    }
+
+  # aws_route_table.public will be created
+  + resource "aws_route_table" "public" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + region           = "ap-south-1"
+      + route            = [
+          + {
+              + cidr_block                 = "0.0.0.0/0"
+              + gateway_id                 = (known after apply)
+                # (12 unchanged attributes hidden)
+            },
+        ]
+      + tags             = {
+          + "Name" = "gearloan-s19-public-rt"
+        }
+      + tags_all         = {
+          + "ManagedBy" = "terraform"
+          + "Name"      = "gearloan-s19-public-rt"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # aws_route_table_association.public will be created
+  + resource "aws_route_table_association" "public" {
+      + id             = (known after apply)
+      + region         = "ap-south-1"
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # aws_s3_bucket.assets will be created
+  + resource "aws_s3_bucket" "assets" {
+      + acceleration_status         = (known after apply)
+      + acl                         = (known after apply)
+      + arn                         = (known after apply)
+      + bucket                      = (known after apply)
+      + bucket_domain_name          = (known after apply)
+      + bucket_namespace            = (known after apply)
+      + bucket_prefix               = (known after apply)
+      + bucket_region               = (known after apply)
+      + bucket_regional_domain_name = (known after apply)
+      + force_destroy               = true
+      + hosted_zone_id              = (known after apply)
+      + id                          = (known after apply)
+      + object_lock_enabled         = (known after apply)
+      + policy                      = (known after apply)
+      + region                      = "ap-south-1"
+      + request_payer               = (known after apply)
+      + tags                        = {
+          + "Name" = "gearloan-s19-assets"
+        }
+      + tags_all                    = {
+          + "ManagedBy" = "terraform"
+          + "Name"      = "gearloan-s19-assets"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+      + website_domain              = (known after apply)
+      + website_endpoint            = (known after apply)
+
+      + cors_rule (known after apply)
+
+      + grant (known after apply)
+
+      + lifecycle_rule (known after apply)
+
+      + logging (known after apply)
+
+      + object_lock_configuration (known after apply)
+
+      + replication_configuration (known after apply)
+
+      + server_side_encryption_configuration (known after apply)
+
+      + versioning (known after apply)
+
+      + website (known after apply)
+    }
+
+  # aws_s3_bucket_ownership_controls.assets will be created
+  + resource "aws_s3_bucket_ownership_controls" "assets" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + region = "ap-south-1"
+
+      + rule {
+          + object_ownership = "BucketOwnerEnforced"
+        }
+    }
+
+  # aws_s3_bucket_public_access_block.assets will be created
+  + resource "aws_s3_bucket_public_access_block" "assets" {
+      + block_public_acls       = true
+      + block_public_policy     = true
+      + bucket                  = (known after apply)
+      + id                      = (known after apply)
+      + ignore_public_acls      = true
+      + region                  = "ap-south-1"
+      + restrict_public_buckets = true
+    }
+
+  # aws_s3_bucket_server_side_encryption_configuration.assets will be created
+  + resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + region = "ap-south-1"
+
+      + rule {
+          + blocked_encryption_types = (known after apply)
+          + bucket_key_enabled       = (known after apply)
+
+          + apply_server_side_encryption_by_default {
+              + kms_master_key_id = (known after apply)
+              + sse_algorithm     = "AES256"
+            }
+        }
+    }
+
+  # aws_s3_bucket_versioning.assets will be created
+  + resource "aws_s3_bucket_versioning" "assets" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + region = "ap-south-1"
+
+      + versioning_configuration {
+          + mfa_delete = (known after apply)
+          + status     = "Enabled"
+        }
+    }
+
+  # aws_security_group.web will be created
+  + resource "aws_security_group" "web" {
+      + arn                    = (known after apply)
+      + description            = "HTTP from anywhere, SSH only from admin_cidr if set"
+      + egress                 = [
+          + {
+              + cidr_blocks      = [
+                  + "0.0.0.0/0",
+                ]
+              + description      = "All outbound (needed for dnf install)"
+              + from_port        = 0
+              + ipv6_cidr_blocks = []
+              + prefix_list_ids  = []
+              + protocol         = "-1"
+              + security_groups  = []
+              + self             = false
+              + to_port          = 0
+            },
+        ]
+      + id                     = (known after apply)
+      + ingress                = [
+          + {
+              + cidr_blocks      = [
+                  + "0.0.0.0/0",
+                ]
+              + description      = "HTTP"
+              + from_port        = 80
+              + ipv6_cidr_blocks = []
+              + prefix_list_ids  = []
+              + protocol         = "tcp"
+              + security_groups  = []
+              + self             = false
+              + to_port          = 80
+            },
+        ]
+      + name                   = "gearloan-s19-web-sg"
+      + name_prefix            = (known after apply)
+      + owner_id               = (known after apply)
+      + region                 = "ap-south-1"
+      + revoke_rules_on_delete = false
+      + tags                   = {
+          + "Name" = "gearloan-s19-web-sg"
+        }
+      + tags_all               = {
+          + "ManagedBy" = "terraform"
+          + "Name"      = "gearloan-s19-web-sg"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+      + vpc_id                 = (known after apply)
+    }
+
+  # aws_subnet.public will be created
+  + resource "aws_subnet" "public" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "ap-south-1a"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.20.1.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block                                = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = true
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + region                                         = "ap-south-1"
+      + tags                                           = {
+          + "Name" = "gearloan-s19-public-subnet"
+        }
+      + tags_all                                       = {
+          + "ManagedBy" = "terraform"
+          + "Name"      = "gearloan-s19-public-subnet"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # aws_vpc.main will be created
+  + resource "aws_vpc" "main" {
+      + arn                                  = (known after apply)
+      + cidr_block                           = "10.20.0.0/16"
+      + default_network_acl_id               = (known after apply)
+      + default_route_table_id               = (known after apply)
+      + default_security_group_id            = (known after apply)
+      + dhcp_options_id                      = (known after apply)
+      + enable_dns_hostnames                 = true
+      + enable_dns_support                   = true
+      + enable_network_address_usage_metrics = (known after apply)
+      + id                                   = (known after apply)
+      + instance_tenancy                     = "default"
+      + ipv6_association_id                  = (known after apply)
+      + ipv6_cidr_block                      = (known after apply)
+      + ipv6_cidr_block_network_border_group = (known after apply)
+      + main_route_table_id                  = (known after apply)
+      + owner_id                             = (known after apply)
+      + region                               = "ap-south-1"
+      + tags                                 = {
+          + "Name" = "gearloan-s19-vpc"
+        }
+      + tags_all                             = {
+          + "ManagedBy" = "terraform"
+          + "Name"      = "gearloan-s19-vpc"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "s19-cloud-terraform"
+        }
+    }
+
+  # random_id.suffix will be created
+  + resource "random_id" "suffix" {
+      + b64_std     = (known after apply)
+      + b64_url     = (known after apply)
+      + byte_length = 4
+      + dec         = (known after apply)
+      + hex         = (known after apply)
+      + id          = (known after apply)
+    }
+
+Plan: 16 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + bucket_name       = (known after apply)
+  + instance_id       = (known after apply)
+  + public_ip         = (known after apply)
+  + security_group_id = (known after apply)
+  + subnet_id         = (known after apply)
+  + vpc_id            = (known after apply)
+  + website_url       = (known after apply)
+
+$ terraform apply -no-color -auto-approve tfplan
+random_id.suffix: Creating...
+random_id.suffix: Creation complete after 0s [id=-eoKww]
+aws_iam_role.web: Creating...
+aws_vpc.main: Creating...
+aws_s3_bucket.assets: Creating...
+aws_iam_role.web: Creation complete after 1s [id=gearloan-s19-web-role]
+aws_iam_instance_profile.web: Creating...
+aws_vpc.main: Creation complete after 4s [id=vpc-0a011aca7565797f7]
+aws_internet_gateway.main: Creating...
+aws_subnet.public: Creating...
+aws_security_group.web: Creating...
+aws_s3_bucket.assets: Creation complete after 5s [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+data.aws_iam_policy_document.read_assets: Reading...
+aws_s3_bucket_ownership_controls.assets: Creating...
+aws_s3_bucket_public_access_block.assets: Creating...
+aws_s3_bucket_versioning.assets: Creating...
+aws_s3_bucket_server_side_encryption_configuration.assets: Creating...
+data.aws_iam_policy_document.read_assets: Read complete after 0s [id=4273298914]
+aws_iam_role_policy.read_assets: Creating...
+aws_internet_gateway.main: Creation complete after 1s [id=igw-0c816d75c710b2b0e]
+aws_route_table.public: Creating...
+aws_iam_role_policy.read_assets: Creation complete after 1s [id=gearloan-s19-web-role:read-assets-bucket]
+aws_s3_bucket_ownership_controls.assets: Creation complete after 1s [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_s3_bucket_public_access_block.assets: Creation complete after 1s [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_s3_bucket_server_side_encryption_configuration.assets: Creation complete after 2s [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_route_table.public: Creation complete after 2s [id=rtb-0c014b09f0254fd68]
+aws_s3_bucket_versioning.assets: Creation complete after 3s [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_iam_instance_profile.web: Creation complete after 7s [id=gearloan-s19-web-profile]
+aws_security_group.web: Creation complete after 4s [id=sg-0cbdf1391963fe351]
+aws_subnet.public: Still creating... [00m10s elapsed]
+aws_subnet.public: Creation complete after 12s [id=subnet-04d0e22cbbeb1001d]
+aws_route_table_association.public: Creating...
+aws_route_table_association.public: Creation complete after 1s [id=rtbassoc-0de627d1f92fd0acc]
+aws_instance.web: Creating...
+aws_instance.web: Still creating... [00m10s elapsed]
+aws_instance.web: Creation complete after 16s [id=i-02ff785a3e916d547]
+
+Apply complete! Resources: 16 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+bucket_name = "srinidhi-24bcs10037-s19-assets-f9ea0ac3"
+instance_id = "i-02ff785a3e916d547"
+public_ip = "35.154.177.7"
+security_group_id = "sg-0cbdf1391963fe351"
+subnet_id = "subnet-04d0e22cbbeb1001d"
+vpc_id = "vpc-0a011aca7565797f7"
+website_url = "http://35.154.177.7"
+
+$ terraform output -no-color
+bucket_name = "srinidhi-24bcs10037-s19-assets-f9ea0ac3"
+instance_id = "i-02ff785a3e916d547"
+public_ip = "35.154.177.7"
+security_group_id = "sg-0cbdf1391963fe351"
+subnet_id = "subnet-04d0e22cbbeb1001d"
+vpc_id = "vpc-0a011aca7565797f7"
+website_url = "http://35.154.177.7"
+
+$ curl -s -i http://35.154.177.7 | head -14
+HTTP/1.1 200 OK
+Server: nginx/1.30.5
+Date: Fri, 16 Oct 2026 21:00:29 GMT
+Content-Type: text/html
+Content-Length: 229
+Last-Modified: Fri, 16 Oct 2026 21:00:25 GMT
+Connection: keep-alive
+ETag: "6ad29069-e5"
+Accept-Ranges: bytes
+
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>GearLoan infra demo</title></head>
+  <body>
+
+$ terraform state list
+data.aws_availability_zones.available
+data.aws_iam_policy_document.ec2_assume
+data.aws_iam_policy_document.read_assets
+data.aws_ssm_parameter.al2023
+aws_iam_instance_profile.web
+aws_iam_role.web
+aws_iam_role_policy.read_assets
+aws_instance.web
+aws_internet_gateway.main
+aws_route_table.public
+aws_route_table_association.public
+aws_s3_bucket.assets
+aws_s3_bucket_ownership_controls.assets
+aws_s3_bucket_public_access_block.assets
+aws_s3_bucket_server_side_encryption_configuration.assets
+aws_s3_bucket_versioning.assets
+aws_security_group.web
+aws_subnet.public
+aws_vpc.main
+random_id.suffix
+
+$ aws ec2 describe-instances --instance-ids $(terraform output -raw instance_id) --query "Reservations[0].Instances[0].{Id:InstanceId,Type:InstanceType,State:State.Name,AZ:Placement.AvailabilityZone,PublicIp:PublicIpAddress,PrivateIp:PrivateIpAddress,Subnet:SubnetId,Vpc:VpcId,IMDSv2:MetadataOptions.HttpTokens,Profile:IamInstanceProfile.Arn}" --output table
+--------------------------------------------------------------------------------------
+|                                  DescribeInstances                                 |
++-----------+------------------------------------------------------------------------+
+|  AZ       |  ap-south-1a                                                           |
+|  IMDSv2   |  required                                                              |
+|  Id       |  i-02ff785a3e916d547                                                   |
+|  PrivateIp|  10.20.1.160                                                           |
+|  Profile  |  arn:aws:iam::451432063943:instance-profile/gearloan-s19-web-profile   |
+|  PublicIp |  35.154.177.7                                                          |
+|  State    |  running                                                               |
+|  Subnet   |  subnet-04d0e22cbbeb1001d                                              |
+|  Type     |  t3.micro                                                              |
+|  Vpc      |  vpc-0a011aca7565797f7                                                 |
++-----------+------------------------------------------------------------------------+
+
+$ aws ec2 describe-vpcs --vpc-ids $(terraform output -raw vpc_id) --query "Vpcs[0].{VpcId:VpcId,Cidr:CidrBlock,Name:Tags[?Key==\`Name\`]|[0].Value}" --output table; aws ec2 describe-subnets --subnet-ids $(terraform output -raw subnet_id) --query "Subnets[0].{SubnetId:SubnetId,Cidr:CidrBlock,AZ:AvailabilityZone,PublicIpOnLaunch:MapPublicIpOnLaunch}" --output table
+---------------------------------------------------------------
+|                        DescribeVpcs                         |
++--------------+--------------------+-------------------------+
+|     Cidr     |       Name         |          VpcId          |
++--------------+--------------------+-------------------------+
+|  10.20.0.0/16|  gearloan-s19-vpc  |  vpc-0a011aca7565797f7  |
++--------------+--------------------+-------------------------+
+--------------------------------------------------
+|                 DescribeSubnets                |
++-------------------+----------------------------+
+|  AZ               |  ap-south-1a               |
+|  Cidr             |  10.20.1.0/24              |
+|  PublicIpOnLaunch |  True                      |
+|  SubnetId         |  subnet-04d0e22cbbeb1001d  |
++-------------------+----------------------------+
+
+$ aws ec2 describe-security-groups --group-ids $(terraform output -raw security_group_id) --query "SecurityGroups[0].IpPermissions[].{Proto:IpProtocol,From:FromPort,To:ToPort,Cidr:IpRanges[0].CidrIp}" --output table
+--------------------------------------
+|       DescribeSecurityGroups       |
++------------+-------+---------+-----+
+|    Cidr    | From  |  Proto  | To  |
++------------+-------+---------+-----+
+|  0.0.0.0/0 |  80   |  tcp    |  80 |
++------------+-------+---------+-----+
+
+$ aws ec2 describe-route-tables --filters Name=vpc-id,Values=$(terraform output -raw vpc_id) --query "RouteTables[].Routes[].{Dest:DestinationCidrBlock,Target:GatewayId}" --output table
+-------------------------------------------
+|           DescribeRouteTables           |
++---------------+-------------------------+
+|     Dest      |         Target          |
++---------------+-------------------------+
+|  10.20.0.0/16 |  local                  |
+|  10.20.0.0/16 |  local                  |
+|  0.0.0.0/0    |  igw-0c816d75c710b2b0e  |
++---------------+-------------------------+
+
+$ B=$(terraform output -raw bucket_name); echo "logo placeholder for GearLoan" | aws s3 cp - s3://$B/assets/readme.txt; aws s3 ls s3://$B --recursive; aws s3api get-bucket-versioning --bucket $B
+2026-10-16 23:00:40         30 assets/readme.txt
+{
+    "Status": "Enabled"
+}
+
+$ aws iam get-role-policy --role-name $(aws iam list-roles --query "Roles[?starts_with(RoleName,\`gearloan-s19\`)].RoleName | [0]" --output text) --policy-name $(aws iam list-role-policies --role-name $(aws iam list-roles --query "Roles[?starts_with(RoleName,\`gearloan-s19\`)].RoleName | [0]" --output text) --query "PolicyNames[0]" --output text) --query PolicyDocument
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "s3:ListBucket",
+            "Effect": "Allow",
+            "Resource": "arn:aws:s3:::srinidhi-24bcs10037-s19-assets-f9ea0ac3",
+            "Sid": "ListAssetsBucket"
+        },
+        {
+            "Action": "s3:GetObject",
+            "Effect": "Allow",
+            "Resource": "arn:aws:s3:::srinidhi-24bcs10037-s19-assets-f9ea0ac3/*",
+            "Sid": "ReadAssetsObjects"
+        }
+    ]
+}
+
+$ terraform graph | grep -E "\->" | grep -v "provider\[" | sed "s/\[root\] //g" | head -25
+  "data.aws_iam_policy_document.read_assets" -> "aws_s3_bucket.assets";
+  "aws_iam_instance_profile.web" -> "aws_iam_role.web";
+  "aws_iam_role.web" -> "data.aws_iam_policy_document.ec2_assume";
+  "aws_iam_role_policy.read_assets" -> "data.aws_iam_policy_document.read_assets";
+  "aws_iam_role_policy.read_assets" -> "aws_iam_role.web";
+  "aws_instance.web" -> "data.aws_ssm_parameter.al2023";
+  "aws_instance.web" -> "aws_iam_instance_profile.web";
+  "aws_instance.web" -> "aws_iam_role_policy.read_assets";
+  "aws_instance.web" -> "aws_route_table_association.public";
+  "aws_instance.web" -> "aws_security_group.web";
+  "aws_internet_gateway.main" -> "aws_vpc.main";
+  "aws_route_table.public" -> "aws_internet_gateway.main";
+  "aws_route_table_association.public" -> "aws_route_table.public";
+  "aws_route_table_association.public" -> "aws_subnet.public";
+  "aws_s3_bucket.assets" -> "random_id.suffix";
+  "aws_s3_bucket_ownership_controls.assets" -> "aws_s3_bucket.assets";
+  "aws_s3_bucket_public_access_block.assets" -> "aws_s3_bucket.assets";
+  "aws_s3_bucket_server_side_encryption_configuration.assets" -> "aws_s3_bucket.assets";
+  "aws_s3_bucket_versioning.assets" -> "aws_s3_bucket.assets";
+  "aws_security_group.web" -> "aws_vpc.main";
+  "aws_subnet.public" -> "data.aws_availability_zones.available";
+  "aws_subnet.public" -> "aws_vpc.main";
+
+$ terraform show -no-color | grep -E "^# |public_ip |instance_type|cidr_block " | head -20
+# data.aws_availability_zones.available:
+# data.aws_iam_policy_document.ec2_assume:
+# data.aws_iam_policy_document.read_assets:
+# data.aws_ssm_parameter.al2023:
+# aws_iam_instance_profile.web:
+# aws_iam_role.web:
+# aws_iam_role_policy.read_assets:
+# aws_instance.web:
+    instance_type                        = "t3.micro"
+    public_ip                            = "35.154.177.7"
+# aws_internet_gateway.main:
+# aws_route_table.public:
+            cidr_block                 = "0.0.0.0/0"
+            ipv6_cidr_block            = null
+# aws_route_table_association.public:
+# aws_s3_bucket.assets:
+# aws_s3_bucket_ownership_controls.assets:
+# aws_s3_bucket_public_access_block.assets:
+# aws_s3_bucket_server_side_encryption_configuration.assets:
+# aws_s3_bucket_versioning.assets:
+
+$ terraform destroy -no-color -auto-approve
+random_id.suffix: Refreshing state... [id=-eoKww]
+data.aws_availability_zones.available: Reading...
+data.aws_ssm_parameter.al2023: Reading...
+data.aws_iam_policy_document.ec2_assume: Reading...
+aws_vpc.main: Refreshing state... [id=vpc-0a011aca7565797f7]
+aws_s3_bucket.assets: Refreshing state... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+data.aws_iam_policy_document.ec2_assume: Read complete after 0s [id=2851119427]
+aws_iam_role.web: Refreshing state... [id=gearloan-s19-web-role]
+data.aws_ssm_parameter.al2023: Read complete after 1s [id=/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64]
+data.aws_availability_zones.available: Read complete after 1s [id=ap-south-1]
+aws_iam_instance_profile.web: Refreshing state... [id=gearloan-s19-web-profile]
+aws_internet_gateway.main: Refreshing state... [id=igw-0c816d75c710b2b0e]
+aws_subnet.public: Refreshing state... [id=subnet-04d0e22cbbeb1001d]
+aws_security_group.web: Refreshing state... [id=sg-0cbdf1391963fe351]
+aws_route_table.public: Refreshing state... [id=rtb-0c014b09f0254fd68]
+aws_route_table_association.public: Refreshing state... [id=rtbassoc-0de627d1f92fd0acc]
+aws_s3_bucket_public_access_block.assets: Refreshing state... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_s3_bucket_ownership_controls.assets: Refreshing state... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_s3_bucket_server_side_encryption_configuration.assets: Refreshing state... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_s3_bucket_versioning.assets: Refreshing state... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+data.aws_iam_policy_document.read_assets: Reading...
+data.aws_iam_policy_document.read_assets: Read complete after 0s [id=4273298914]
+aws_iam_role_policy.read_assets: Refreshing state... [id=gearloan-s19-web-role:read-assets-bucket]
+aws_instance.web: Refreshing state... [id=i-02ff785a3e916d547]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # aws_iam_instance_profile.web will be destroyed
+  - resource "aws_iam_instance_profile" "web" {
+      - arn         = "arn:aws:iam::451432063943:instance-profile/gearloan-s19-web-profile" -> null
+      - create_date = "2026-10-16T20:59:28Z" -> null
+      - id          = "gearloan-s19-web-profile" -> null
+      - name        = "gearloan-s19-web-profile" -> null
+      - path        = "/" -> null
+      - role        = "gearloan-s19-web-role" -> null
+      - tags        = {} -> null
+      - tags_all    = {
+          - "ManagedBy" = "terraform"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+      - unique_id   = "AIPAWSG3SUPD7Q3SNB35Y" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # aws_iam_role.web will be destroyed
+  - resource "aws_iam_role" "web" {
+      - arn                   = "arn:aws:iam::451432063943:role/gearloan-s19-web-role" -> null
+      - assume_role_policy    = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action    = "sts:AssumeRole"
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "ec2.amazonaws.com"
+                        }
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - create_date           = "2026-10-16T20:59:27Z" -> null
+      - force_detach_policies = false -> null
+      - id                    = "gearloan-s19-web-role" -> null
+      - managed_policy_arns   = [] -> null
+      - max_session_duration  = 3600 -> null
+      - name                  = "gearloan-s19-web-role" -> null
+      - path                  = "/" -> null
+      - tags                  = {} -> null
+      - tags_all              = {
+          - "ManagedBy" = "terraform"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+      - unique_id             = "AROAWSG3SUPDWBWJSHBC3" -> null
+        # (3 unchanged attributes hidden)
+
+      - inline_policy {
+          - name   = "read-assets-bucket" -> null
+          - policy = jsonencode(
+                {
+                  - Statement = [
+                      - {
+                          - Action   = "s3:ListBucket"
+                          - Effect   = "Allow"
+                          - Resource = "arn:aws:s3:::srinidhi-24bcs10037-s19-assets-f9ea0ac3"
+                          - Sid      = "ListAssetsBucket"
+                        },
+                      - {
+                          - Action   = "s3:GetObject"
+                          - Effect   = "Allow"
+                          - Resource = "arn:aws:s3:::srinidhi-24bcs10037-s19-assets-f9ea0ac3/*"
+                          - Sid      = "ReadAssetsObjects"
+                        },
+                    ]
+                  - Version   = "2012-10-17"
+                }
+            ) -> null
+        }
+    }
+
+  # aws_iam_role_policy.read_assets will be destroyed
+  - resource "aws_iam_role_policy" "read_assets" {
+      - id          = "gearloan-s19-web-role:read-assets-bucket" -> null
+      - name        = "read-assets-bucket" -> null
+      - policy      = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action   = "s3:ListBucket"
+                      - Effect   = "Allow"
+                      - Resource = "arn:aws:s3:::srinidhi-24bcs10037-s19-assets-f9ea0ac3"
+                      - Sid      = "ListAssetsBucket"
+                    },
+                  - {
+                      - Action   = "s3:GetObject"
+                      - Effect   = "Allow"
+                      - Resource = "arn:aws:s3:::srinidhi-24bcs10037-s19-assets-f9ea0ac3/*"
+                      - Sid      = "ReadAssetsObjects"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - role        = "gearloan-s19-web-role" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # aws_instance.web will be destroyed
+  - resource "aws_instance" "web" {
+      - ami                                  = "ami-04394a3a96907e9ec" -> null
+      - arn                                  = "arn:aws:ec2:ap-south-1:451432063943:instance/i-02ff785a3e916d547" -> null
+      - associate_public_ip_address          = true -> null
+      - availability_zone                    = "ap-south-1a" -> null
+      - disable_api_stop                     = false -> null
+      - disable_api_termination              = false -> null
+      - ebs_optimized                        = false -> null
+      - force_destroy                        = false -> null
+      - get_password_data                    = false -> null
+      - hibernation                          = false -> null
+      - iam_instance_profile                 = "gearloan-s19-web-profile" -> null
+      - id                                   = "i-02ff785a3e916d547" -> null
+      - instance_initiated_shutdown_behavior = "stop" -> null
+      - instance_state                       = "running" -> null
+      - instance_type                        = "t3.micro" -> null
+      - ipv6_address_count                   = 0 -> null
+      - ipv6_addresses                       = [] -> null
+      - monitoring                           = false -> null
+      - placement_partition_number           = 0 -> null
+      - primary_network_interface_id         = "eni-0c8111601b6ddaacf" -> null
+      - private_dns                          = "ip-10-20-1-160.ap-south-1.compute.internal" -> null
+      - private_ip                           = "10.20.1.160" -> null
+      - public_dns                           = "ec2-35-154-177-7.ap-south-1.compute.amazonaws.com" -> null
+      - public_ip                            = "35.154.177.7" -> null
+      - region                               = "ap-south-1" -> null
+      - secondary_private_ips                = [] -> null
+      - security_groups                      = [] -> null
+      - source_dest_check                    = true -> null
+      - subnet_id                            = "subnet-04d0e22cbbeb1001d" -> null
+      - tags                                 = {
+          - "Name" = "gearloan-s19-web"
+        } -> null
+      - tags_all                             = {
+          - "ManagedBy" = "terraform"
+          - "Name"      = "gearloan-s19-web"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+      - tenancy                              = "default" -> null
+      - user_data                            = <<-EOT
+            #!/bin/bash
+            set -euxo pipefail
+            
+            dnf install -y nginx
+            
+            # Get the instance id using IMDSv2 (token first, then the metadata call).
+            TOKEN=$(curl -sS -X PUT "http://169.254.169.254/latest/api/token" \
+              -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+            INSTANCE_ID=$(curl -sS -H "X-aws-ec2-metadata-token: $TOKEN" \
+              http://169.254.169.254/latest/meta-data/instance-id)
+            
+            cat > /usr/share/nginx/html/index.html <<HTML
+            <!doctype html>
+            <html>
+              <head><meta charset="utf-8"><title>GearLoan infra demo</title></head>
+              <body>
+                <h1>GearLoan infra demo – Srinidhi Narendran 24BCS10037 – served from EC2 ${INSTANCE_ID}</h1>
+              </body>
+            </html>
+            HTML
+            
+            systemctl enable --now nginx
+        EOT -> null
+      - user_data_replace_on_change          = true -> null
+      - vpc_security_group_ids               = [
+          - "sg-0cbdf1391963fe351",
+        ] -> null
+        # (8 unchanged attributes hidden)
+
+      - capacity_reservation_specification {
+          - capacity_reservation_preference = "open" -> null
+        }
+
+      - cpu_options {
+          - core_count            = 1 -> null
+          - threads_per_core      = 2 -> null
+            # (2 unchanged attributes hidden)
+        }
+
+      - credit_specification {
+          - cpu_credits = "unlimited" -> null
+        }
+
+      - enclave_options {
+          - enabled = false -> null
+        }
+
+      - maintenance_options {
+          - auto_recovery = "default" -> null
+        }
+
+      - metadata_options {
+          - http_endpoint               = "enabled" -> null
+          - http_protocol_ipv6          = "disabled" -> null
+          - http_put_response_hop_limit = 1 -> null
+          - http_tokens                 = "required" -> null
+          - instance_metadata_tags      = "disabled" -> null
+        }
+
+      - primary_network_interface {
+          - delete_on_termination = true -> null
+          - network_interface_id  = "eni-0c8111601b6ddaacf" -> null
+        }
+
+      - private_dns_name_options {
+          - enable_resource_name_dns_a_record    = false -> null
+          - enable_resource_name_dns_aaaa_record = false -> null
+          - hostname_type                        = "ip-name" -> null
+        }
+
+      - root_block_device {
+          - delete_on_termination = true -> null
+          - device_name           = "/dev/xvda" -> null
+          - encrypted             = true -> null
+          - iops                  = 3000 -> null
+          - kms_key_id            = "arn:aws:kms:ap-south-1:451432063943:key/99939211-9daa-4294-a44e-0fc960e79fc6" -> null
+          - tags                  = {} -> null
+          - tags_all              = {
+              - "ManagedBy" = "terraform"
+              - "Owner"     = "srinidhi-24bcs10037"
+              - "Project"   = "s19-cloud-terraform"
+            } -> null
+          - throughput            = 125 -> null
+          - volume_id             = "vol-0f51e244fbe2ddc70" -> null
+          - volume_size           = 8 -> null
+          - volume_type           = "gp3" -> null
+        }
+    }
+
+  # aws_internet_gateway.main will be destroyed
+  - resource "aws_internet_gateway" "main" {
+      - arn      = "arn:aws:ec2:ap-south-1:451432063943:internet-gateway/igw-0c816d75c710b2b0e" -> null
+      - id       = "igw-0c816d75c710b2b0e" -> null
+      - owner_id = "451432063943" -> null
+      - region   = "ap-south-1" -> null
+      - tags     = {
+          - "Name" = "gearloan-s19-igw"
+        } -> null
+      - tags_all = {
+          - "ManagedBy" = "terraform"
+          - "Name"      = "gearloan-s19-igw"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+      - vpc_id   = "vpc-0a011aca7565797f7" -> null
+    }
+
+  # aws_route_table.public will be destroyed
+  - resource "aws_route_table" "public" {
+      - arn              = "arn:aws:ec2:ap-south-1:451432063943:route-table/rtb-0c014b09f0254fd68" -> null
+      - id               = "rtb-0c014b09f0254fd68" -> null
+      - owner_id         = "451432063943" -> null
+      - propagating_vgws = [] -> null
+      - region           = "ap-south-1" -> null
+      - route            = [
+          - {
+              - cidr_block                 = "0.0.0.0/0"
+              - gateway_id                 = "igw-0c816d75c710b2b0e"
+                # (12 unchanged attributes hidden)
+            },
+        ] -> null
+      - tags             = {
+          - "Name" = "gearloan-s19-public-rt"
+        } -> null
+      - tags_all         = {
+          - "ManagedBy" = "terraform"
+          - "Name"      = "gearloan-s19-public-rt"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+      - vpc_id           = "vpc-0a011aca7565797f7" -> null
+    }
+
+  # aws_route_table_association.public will be destroyed
+  - resource "aws_route_table_association" "public" {
+      - id             = "rtbassoc-0de627d1f92fd0acc" -> null
+      - region         = "ap-south-1" -> null
+      - route_table_id = "rtb-0c014b09f0254fd68" -> null
+      - subnet_id      = "subnet-04d0e22cbbeb1001d" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # aws_s3_bucket.assets will be destroyed
+  - resource "aws_s3_bucket" "assets" {
+      - arn                         = "arn:aws:s3:::srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - bucket                      = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - bucket_domain_name          = "srinidhi-24bcs10037-s19-assets-f9ea0ac3.s3.amazonaws.com" -> null
+      - bucket_namespace            = "global" -> null
+      - bucket_region               = "ap-south-1" -> null
+      - bucket_regional_domain_name = "srinidhi-24bcs10037-s19-assets-f9ea0ac3.s3.ap-south-1.amazonaws.com" -> null
+      - force_destroy               = true -> null
+      - hosted_zone_id              = "Z11RGJOFQNVJUP" -> null
+      - id                          = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - object_lock_enabled         = false -> null
+      - region                      = "ap-south-1" -> null
+      - request_payer               = "BucketOwner" -> null
+      - tags                        = {
+          - "Name" = "gearloan-s19-assets"
+        } -> null
+      - tags_all                    = {
+          - "ManagedBy" = "terraform"
+          - "Name"      = "gearloan-s19-assets"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+        # (3 unchanged attributes hidden)
+
+      - grant {
+          - id          = "f36fc2942619b473149770f0e968a8866f04711a87f258a72c5ec39a4a233b5e" -> null
+          - permissions = [
+              - "FULL_CONTROL",
+            ] -> null
+          - type        = "CanonicalUser" -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - server_side_encryption_configuration {
+          - rule {
+              - bucket_key_enabled = false -> null
+
+              - apply_server_side_encryption_by_default {
+                  - sse_algorithm     = "AES256" -> null
+                    # (1 unchanged attribute hidden)
+                }
+            }
+        }
+
+      - versioning {
+          - enabled    = true -> null
+          - mfa_delete = false -> null
+        }
+    }
+
+  # aws_s3_bucket_ownership_controls.assets will be destroyed
+  - resource "aws_s3_bucket_ownership_controls" "assets" {
+      - bucket = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - id     = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - region = "ap-south-1" -> null
+
+      - rule {
+          - object_ownership = "BucketOwnerEnforced" -> null
+        }
+    }
+
+  # aws_s3_bucket_public_access_block.assets will be destroyed
+  - resource "aws_s3_bucket_public_access_block" "assets" {
+      - block_public_acls       = true -> null
+      - block_public_policy     = true -> null
+      - bucket                  = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - id                      = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - ignore_public_acls      = true -> null
+      - region                  = "ap-south-1" -> null
+      - restrict_public_buckets = true -> null
+    }
+
+  # aws_s3_bucket_server_side_encryption_configuration.assets will be destroyed
+  - resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
+      - bucket                = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - id                    = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - region                = "ap-south-1" -> null
+        # (1 unchanged attribute hidden)
+
+      - rule {
+          - blocked_encryption_types = [
+              - "SSE-C",
+            ] -> null
+          - bucket_key_enabled       = false -> null
+
+          - apply_server_side_encryption_by_default {
+              - sse_algorithm     = "AES256" -> null
+                # (1 unchanged attribute hidden)
+            }
+        }
+    }
+
+  # aws_s3_bucket_versioning.assets will be destroyed
+  - resource "aws_s3_bucket_versioning" "assets" {
+      - bucket                = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - id                    = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+      - region                = "ap-south-1" -> null
+        # (1 unchanged attribute hidden)
+
+      - versioning_configuration {
+          - mfa_delete = "Disabled" -> null
+          - status     = "Enabled" -> null
+        }
+    }
+
+  # aws_security_group.web will be destroyed
+  - resource "aws_security_group" "web" {
+      - arn                    = "arn:aws:ec2:ap-south-1:451432063943:security-group/sg-0cbdf1391963fe351" -> null
+      - description            = "HTTP from anywhere, SSH only from admin_cidr if set" -> null
+      - egress                 = [
+          - {
+              - cidr_blocks      = [
+                  - "0.0.0.0/0",
+                ]
+              - description      = "All outbound (needed for dnf install)"
+              - from_port        = 0
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "-1"
+              - security_groups  = []
+              - self             = false
+              - to_port          = 0
+            },
+        ] -> null
+      - id                     = "sg-0cbdf1391963fe351" -> null
+      - ingress                = [
+          - {
+              - cidr_blocks      = [
+                  - "0.0.0.0/0",
+                ]
+              - description      = "HTTP"
+              - from_port        = 80
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "tcp"
+              - security_groups  = []
+              - self             = false
+              - to_port          = 80
+            },
+        ] -> null
+      - name                   = "gearloan-s19-web-sg" -> null
+      - owner_id               = "451432063943" -> null
+      - region                 = "ap-south-1" -> null
+      - revoke_rules_on_delete = false -> null
+      - tags                   = {
+          - "Name" = "gearloan-s19-web-sg"
+        } -> null
+      - tags_all               = {
+          - "ManagedBy" = "terraform"
+          - "Name"      = "gearloan-s19-web-sg"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+      - vpc_id                 = "vpc-0a011aca7565797f7" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # aws_subnet.public will be destroyed
+  - resource "aws_subnet" "public" {
+      - arn                                            = "arn:aws:ec2:ap-south-1:451432063943:subnet/subnet-04d0e22cbbeb1001d" -> null
+      - assign_ipv6_address_on_creation                = false -> null
+      - availability_zone                              = "ap-south-1a" -> null
+      - availability_zone_id                           = "aps1-az1" -> null
+      - cidr_block                                     = "10.20.1.0/24" -> null
+      - enable_dns64                                   = false -> null
+      - enable_lni_at_device_index                     = 0 -> null
+      - enable_resource_name_dns_a_record_on_launch    = false -> null
+      - enable_resource_name_dns_aaaa_record_on_launch = false -> null
+      - id                                             = "subnet-04d0e22cbbeb1001d" -> null
+      - ipv6_native                                    = false -> null
+      - map_customer_owned_ip_on_launch                = false -> null
+      - map_public_ip_on_launch                        = true -> null
+      - owner_id                                       = "451432063943" -> null
+      - private_dns_hostname_type_on_launch            = "ip-name" -> null
+      - region                                         = "ap-south-1" -> null
+      - tags                                           = {
+          - "Name" = "gearloan-s19-public-subnet"
+        } -> null
+      - tags_all                                       = {
+          - "ManagedBy" = "terraform"
+          - "Name"      = "gearloan-s19-public-subnet"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+      - vpc_id                                         = "vpc-0a011aca7565797f7" -> null
+        # (4 unchanged attributes hidden)
+    }
+
+  # aws_vpc.main will be destroyed
+  - resource "aws_vpc" "main" {
+      - arn                                  = "arn:aws:ec2:ap-south-1:451432063943:vpc/vpc-0a011aca7565797f7" -> null
+      - assign_generated_ipv6_cidr_block     = false -> null
+      - cidr_block                           = "10.20.0.0/16" -> null
+      - default_network_acl_id               = "acl-01ce4c28a1f6244f2" -> null
+      - default_route_table_id               = "rtb-0a9b4d6001ef27e4a" -> null
+      - default_security_group_id            = "sg-0f1ad22516a13c255" -> null
+      - dhcp_options_id                      = "dopt-0492b4f55340209f0" -> null
+      - enable_dns_hostnames                 = true -> null
+      - enable_dns_support                   = true -> null
+      - enable_network_address_usage_metrics = false -> null
+      - id                                   = "vpc-0a011aca7565797f7" -> null
+      - instance_tenancy                     = "default" -> null
+      - ipv6_netmask_length                  = 0 -> null
+      - main_route_table_id                  = "rtb-0a9b4d6001ef27e4a" -> null
+      - owner_id                             = "451432063943" -> null
+      - region                               = "ap-south-1" -> null
+      - tags                                 = {
+          - "Name" = "gearloan-s19-vpc"
+        } -> null
+      - tags_all                             = {
+          - "ManagedBy" = "terraform"
+          - "Name"      = "gearloan-s19-vpc"
+          - "Owner"     = "srinidhi-24bcs10037"
+          - "Project"   = "s19-cloud-terraform"
+        } -> null
+        # (4 unchanged attributes hidden)
+    }
+
+  # random_id.suffix will be destroyed
+  - resource "random_id" "suffix" {
+      - b64_std     = "+eoKww==" -> null
+      - b64_url     = "-eoKww" -> null
+      - byte_length = 4 -> null
+      - dec         = "4192864963" -> null
+      - hex         = "f9ea0ac3" -> null
+      - id          = "-eoKww" -> null
+    }
+
+Plan: 0 to add, 0 to change, 16 to destroy.
+
+Changes to Outputs:
+  - bucket_name       = "srinidhi-24bcs10037-s19-assets-f9ea0ac3" -> null
+  - instance_id       = "i-02ff785a3e916d547" -> null
+  - public_ip         = "35.154.177.7" -> null
+  - security_group_id = "sg-0cbdf1391963fe351" -> null
+  - subnet_id         = "subnet-04d0e22cbbeb1001d" -> null
+  - vpc_id            = "vpc-0a011aca7565797f7" -> null
+  - website_url       = "http://35.154.177.7" -> null
+aws_s3_bucket_public_access_block.assets: Destroying... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_s3_bucket_versioning.assets: Destroying... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_s3_bucket_ownership_controls.assets: Destroying... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_s3_bucket_server_side_encryption_configuration.assets: Destroying... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_instance.web: Destroying... [id=i-02ff785a3e916d547]
+aws_s3_bucket_public_access_block.assets: Destruction complete after 1s
+aws_s3_bucket_server_side_encryption_configuration.assets: Destruction complete after 1s
+aws_s3_bucket_versioning.assets: Destruction complete after 1s
+aws_s3_bucket_ownership_controls.assets: Destruction complete after 3s
+aws_instance.web: Still destroying... [id=i-02ff785a3e916d547, 00m10s elapsed]
+aws_instance.web: Still destroying... [id=i-02ff785a3e916d547, 00m20s elapsed]
+aws_instance.web: Still destroying... [id=i-02ff785a3e916d547, 00m30s elapsed]
+aws_instance.web: Destruction complete after 32s
+aws_iam_role_policy.read_assets: Destroying... [id=gearloan-s19-web-role:read-assets-bucket]
+aws_route_table_association.public: Destroying... [id=rtbassoc-0de627d1f92fd0acc]
+aws_iam_instance_profile.web: Destroying... [id=gearloan-s19-web-profile]
+aws_security_group.web: Destroying... [id=sg-0cbdf1391963fe351]
+aws_route_table_association.public: Destruction complete after 1s
+aws_subnet.public: Destroying... [id=subnet-04d0e22cbbeb1001d]
+aws_route_table.public: Destroying... [id=rtb-0c014b09f0254fd68]
+aws_iam_role_policy.read_assets: Destruction complete after 1s
+aws_s3_bucket.assets: Destroying... [id=srinidhi-24bcs10037-s19-assets-f9ea0ac3]
+aws_iam_instance_profile.web: Destruction complete after 1s
+aws_iam_role.web: Destroying... [id=gearloan-s19-web-role]
+aws_security_group.web: Destruction complete after 2s
+aws_subnet.public: Destruction complete after 1s
+aws_iam_role.web: Destruction complete after 1s
+aws_route_table.public: Destruction complete after 1s
+aws_internet_gateway.main: Destroying... [id=igw-0c816d75c710b2b0e]
+aws_internet_gateway.main: Destruction complete after 1s
+aws_vpc.main: Destroying... [id=vpc-0a011aca7565797f7]
+aws_s3_bucket.assets: Destruction complete after 2s
+random_id.suffix: Destroying... [id=-eoKww]
+random_id.suffix: Destruction complete after 0s
+aws_vpc.main: Destruction complete after 1s
+
+Destroy complete! Resources: 16 destroyed.
+
+$ terraform state list | wc -l; aws ec2 describe-instances --filters Name=tag:Project,Values=s19-cloud-terraform Name=instance-state-name,Values=pending,running,stopping,stopped --query "Reservations[].Instances[].InstanceId" --output text; aws ec2 describe-vpcs --filters Name=tag:Project,Values=s19-cloud-terraform --query "Vpcs[].VpcId" --output text; aws s3api list-buckets --query "Buckets[?starts_with(Name,\`srinidhi-24bcs10037-s19\`)].Name" --output text; aws ec2 describe-addresses --query "Addresses[].PublicIp" --output text; echo "(empty lines above = no s19 instance, VPC, bucket or Elastic IP left)"
+       0
+(empty lines above = no s19 instance, VPC, bucket or Elastic IP left)
+

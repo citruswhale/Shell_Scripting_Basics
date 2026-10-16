@@ -1,0 +1,524 @@
+$ aws sts get-caller-identity --query "{Account:Account,Arn:Arn}" --output table
+---------------------------------------------------------------
+|                      GetCallerIdentity                      |
++---------------+---------------------------------------------+
+|    Account    |                     Arn                     |
++---------------+---------------------------------------------+
+|  451432063943 |  arn:aws:iam::451432063943:user/devops-lab  |
++---------------+---------------------------------------------+
+
+$ terraform version
+Terraform v1.16.6
+on darwin_arm64
++ provider registry.terraform.io/hashicorp/aws v6.69.1
++ provider registry.terraform.io/hashicorp/random v3.9.1
+
+$ terraform init -no-color
+Initializing the backend...
+
+Initializing provider plugins...
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Reusing previous version of hashicorp/random from the dependency lock file
+- Using previously-installed hashicorp/aws v6.69.1
+- Using previously-installed hashicorp/random v3.9.1
+
+Terraform has been successfully initialized!
+
+$ terraform fmt -check -diff -recursive && echo "fmt: nothing to change"
+fmt: nothing to change
+
+$ terraform validate -no-color
+Success! The configuration is valid.
+
+
+$ terraform plan -no-color -out=tfplan
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_s3_bucket.demo will be created
+  + resource "aws_s3_bucket" "demo" {
+      + acceleration_status         = (known after apply)
+      + acl                         = (known after apply)
+      + arn                         = (known after apply)
+      + bucket                      = (known after apply)
+      + bucket_domain_name          = (known after apply)
+      + bucket_namespace            = (known after apply)
+      + bucket_prefix               = (known after apply)
+      + bucket_region               = (known after apply)
+      + bucket_regional_domain_name = (known after apply)
+      + force_destroy               = true
+      + hosted_zone_id              = (known after apply)
+      + id                          = (known after apply)
+      + object_lock_enabled         = (known after apply)
+      + policy                      = (known after apply)
+      + region                      = "ap-south-1"
+      + request_payer               = (known after apply)
+      + tags_all                    = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "terraform"
+          + "Owner"       = "srinidhi-24bcs10037"
+          + "Project"     = "s18-terraform-s3-demo"
+        }
+      + website_domain              = (known after apply)
+      + website_endpoint            = (known after apply)
+
+      + cors_rule (known after apply)
+
+      + grant (known after apply)
+
+      + lifecycle_rule (known after apply)
+
+      + logging (known after apply)
+
+      + object_lock_configuration (known after apply)
+
+      + replication_configuration (known after apply)
+
+      + server_side_encryption_configuration (known after apply)
+
+      + versioning (known after apply)
+
+      + website (known after apply)
+    }
+
+  # aws_s3_bucket_ownership_controls.demo will be created
+  + resource "aws_s3_bucket_ownership_controls" "demo" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + region = "ap-south-1"
+
+      + rule {
+          + object_ownership = "BucketOwnerEnforced"
+        }
+    }
+
+  # aws_s3_bucket_public_access_block.demo will be created
+  + resource "aws_s3_bucket_public_access_block" "demo" {
+      + block_public_acls       = true
+      + block_public_policy     = true
+      + bucket                  = (known after apply)
+      + id                      = (known after apply)
+      + ignore_public_acls      = true
+      + region                  = "ap-south-1"
+      + restrict_public_buckets = true
+    }
+
+  # aws_s3_bucket_server_side_encryption_configuration.demo will be created
+  + resource "aws_s3_bucket_server_side_encryption_configuration" "demo" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + region = "ap-south-1"
+
+      + rule {
+          + blocked_encryption_types = (known after apply)
+          + bucket_key_enabled       = (known after apply)
+
+          + apply_server_side_encryption_by_default {
+              + kms_master_key_id = (known after apply)
+              + sse_algorithm     = "AES256"
+            }
+        }
+    }
+
+  # aws_s3_bucket_versioning.demo will be created
+  + resource "aws_s3_bucket_versioning" "demo" {
+      + bucket = (known after apply)
+      + id     = (known after apply)
+      + region = "ap-south-1"
+
+      + versioning_configuration {
+          + mfa_delete = (known after apply)
+          + status     = "Enabled"
+        }
+    }
+
+  # aws_s3_object.hello will be created
+  + resource "aws_s3_object" "hello" {
+      + acl                    = (known after apply)
+      + arn                    = (known after apply)
+      + bucket                 = (known after apply)
+      + bucket_key_enabled     = (known after apply)
+      + checksum_crc32         = (known after apply)
+      + checksum_crc32c        = (known after apply)
+      + checksum_crc64nvme     = (known after apply)
+      + checksum_sha1          = (known after apply)
+      + checksum_sha256        = (known after apply)
+      + content                = "Hello from Terraform - Srinidhi Narendran 24BCS10037"
+      + content_type           = "text/plain"
+      + etag                   = (known after apply)
+      + force_destroy          = false
+      + id                     = (known after apply)
+      + key                    = "demo/hello.txt"
+      + kms_key_id             = (known after apply)
+      + region                 = "ap-south-1"
+      + server_side_encryption = (known after apply)
+      + storage_class          = (known after apply)
+      + tags_all               = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "terraform"
+          + "Owner"       = "srinidhi-24bcs10037"
+          + "Project"     = "s18-terraform-s3-demo"
+        }
+      + version_id             = (known after apply)
+    }
+
+  # random_id.suffix will be created
+  + resource "random_id" "suffix" {
+      + b64_std     = (known after apply)
+      + b64_url     = (known after apply)
+      + byte_length = 4
+      + dec         = (known after apply)
+      + hex         = (known after apply)
+      + id          = (known after apply)
+    }
+
+Plan: 7 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + bucket_arn        = (known after apply)
+  + bucket_name       = (known after apply)
+  + bucket_region     = "ap-south-1"
+  + demo_object_key   = "demo/hello.txt"
+  + versioning_status = "Enabled"
+
+$ terraform apply -no-color -auto-approve tfplan
+random_id.suffix: Creating...
+random_id.suffix: Creation complete after 0s [id=2qzZjg]
+aws_s3_bucket.demo: Creating...
+aws_s3_bucket.demo: Creation complete after 5s [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_ownership_controls.demo: Creating...
+aws_s3_bucket_public_access_block.demo: Creating...
+aws_s3_bucket_versioning.demo: Creating...
+aws_s3_bucket_server_side_encryption_configuration.demo: Creating...
+aws_s3_bucket_public_access_block.demo: Creation complete after 1s [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_ownership_controls.demo: Creation complete after 1s [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_server_side_encryption_configuration.demo: Creation complete after 1s [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_versioning.demo: Creation complete after 3s [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_object.hello: Creating...
+aws_s3_object.hello: Creation complete after 0s [id=srinidhi-24bcs10037-s18-daacd98e/demo/hello.txt]
+
+Apply complete! Resources: 7 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+bucket_arn = "arn:aws:s3:::srinidhi-24bcs10037-s18-daacd98e"
+bucket_name = "srinidhi-24bcs10037-s18-daacd98e"
+bucket_region = "ap-south-1"
+demo_object_key = "demo/hello.txt"
+versioning_status = "Enabled"
+
+$ terraform output -no-color
+bucket_arn = "arn:aws:s3:::srinidhi-24bcs10037-s18-daacd98e"
+bucket_name = "srinidhi-24bcs10037-s18-daacd98e"
+bucket_region = "ap-south-1"
+demo_object_key = "demo/hello.txt"
+versioning_status = "Enabled"
+
+$ terraform show -no-color | head -60
+# aws_s3_bucket.demo:
+resource "aws_s3_bucket" "demo" {
+    acceleration_status         = null
+    arn                         = "arn:aws:s3:::srinidhi-24bcs10037-s18-daacd98e"
+    bucket                      = "srinidhi-24bcs10037-s18-daacd98e"
+    bucket_domain_name          = "srinidhi-24bcs10037-s18-daacd98e.s3.amazonaws.com"
+    bucket_namespace            = "global"
+    bucket_prefix               = null
+    bucket_region               = "ap-south-1"
+    bucket_regional_domain_name = "srinidhi-24bcs10037-s18-daacd98e.s3.ap-south-1.amazonaws.com"
+    force_destroy               = true
+    hosted_zone_id              = "Z11RGJOFQNVJUP"
+    id                          = "srinidhi-24bcs10037-s18-daacd98e"
+    object_lock_enabled         = false
+    policy                      = null
+    region                      = "ap-south-1"
+    request_payer               = "BucketOwner"
+    tags_all                    = {
+        "Environment" = "dev"
+        "ManagedBy"   = "terraform"
+        "Owner"       = "srinidhi-24bcs10037"
+        "Project"     = "s18-terraform-s3-demo"
+    }
+
+    grant {
+        id          = "f36fc2942619b473149770f0e968a8866f04711a87f258a72c5ec39a4a233b5e"
+        permissions = [
+            "FULL_CONTROL",
+        ]
+        type        = "CanonicalUser"
+        uri         = null
+    }
+
+    server_side_encryption_configuration {
+        rule {
+            bucket_key_enabled = false
+
+            apply_server_side_encryption_by_default {
+                kms_master_key_id = null
+                sse_algorithm     = "AES256"
+            }
+        }
+    }
+
+    versioning {
+        enabled    = false
+        mfa_delete = false
+    }
+}
+
+# aws_s3_bucket_ownership_controls.demo:
+resource "aws_s3_bucket_ownership_controls" "demo" {
+    bucket = "srinidhi-24bcs10037-s18-daacd98e"
+    id     = "srinidhi-24bcs10037-s18-daacd98e"
+    region = "ap-south-1"
+
+    rule {
+        object_ownership = "BucketOwnerEnforced"
+    }
+}
+
+$ terraform state list
+aws_s3_bucket.demo
+aws_s3_bucket_ownership_controls.demo
+aws_s3_bucket_public_access_block.demo
+aws_s3_bucket_server_side_encryption_configuration.demo
+aws_s3_bucket_versioning.demo
+aws_s3_object.hello
+random_id.suffix
+
+$ B=$(terraform output -raw bucket_name); aws s3api get-bucket-versioning --bucket $B; aws s3api get-bucket-encryption --bucket $B --query "ServerSideEncryptionConfiguration.Rules[0]"; aws s3api get-public-access-block --bucket $B --query PublicAccessBlockConfiguration; aws s3 ls s3://$B --recursive; aws s3 cp s3://$B/demo/hello.txt - ; echo
+{
+    "Status": "Enabled"
+}
+{
+    "ApplyServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+    },
+    "BucketKeyEnabled": false,
+    "BlockedEncryptionTypes": {
+        "EncryptionType": [
+            "SSE-C"
+        ]
+    }
+}
+{
+    "BlockPublicAcls": true,
+    "IgnorePublicAcls": true,
+    "BlockPublicPolicy": true,
+    "RestrictPublicBuckets": true
+}
+2026-10-16 22:57:52         52 demo/hello.txt
+Hello from Terraform - Srinidhi Narendran 24BCS10037
+
+$ B=$(terraform output -raw bucket_name); echo "version 2 - changed outside Terraform" | aws s3 cp - s3://$B/demo/hello.txt; aws s3api list-object-versions --bucket $B --prefix demo/hello.txt --query "Versions[].{VersionId:VersionId,IsLatest:IsLatest,Size:Size,LastModified:LastModified}" --output table
+---------------------------------------------------------------------------------------
+|                                 ListObjectVersions                                  |
++----------+-----------------------------+-------+------------------------------------+
+| IsLatest |        LastModified         | Size  |             VersionId              |
++----------+-----------------------------+-------+------------------------------------+
+|  True    |  2026-10-16T20:58:19+00:00  |  38   |  DgrVvCcOrYAYddZa02jOkfjRY1UdoDSF  |
+|  False   |  2026-10-16T20:57:52+00:00  |  52   |  fH7jgxsZvWJea.cDNVQ220QGtL8E2m3_  |
++----------+-----------------------------+-------+------------------------------------+
+
+$ terraform plan -no-color -detailed-exitcode | tail -15; echo "plan exit code: ${PIPESTATUS[0]}"
+  ~ resource "aws_s3_object" "hello" {
+      ~ content_type                  = "binary/octet-stream" -> "text/plain"
+        id                            = "srinidhi-24bcs10037-s18-daacd98e/demo/hello.txt"
+        tags                          = {}
+      ~ tags_all                      = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "terraform"
+          + "Owner"       = "srinidhi-24bcs10037"
+          + "Project"     = "s18-terraform-s3-demo"
+        }
+      ~ version_id                    = "DgrVvCcOrYAYddZa02jOkfjRY1UdoDSF" -> (known after apply)
+        # (24 unchanged attributes hidden)
+    }
+
+Plan: 0 to add, 1 to change, 0 to destroy.
+plan exit code: 2
+
+$ terraform destroy -no-color -auto-approve
+random_id.suffix: Refreshing state... [id=2qzZjg]
+aws_s3_bucket.demo: Refreshing state... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_ownership_controls.demo: Refreshing state... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_public_access_block.demo: Refreshing state... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_versioning.demo: Refreshing state... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_server_side_encryption_configuration.demo: Refreshing state... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_object.hello: Refreshing state... [id=srinidhi-24bcs10037-s18-daacd98e/demo/hello.txt]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # aws_s3_bucket.demo will be destroyed
+  - resource "aws_s3_bucket" "demo" {
+      - arn                         = "arn:aws:s3:::srinidhi-24bcs10037-s18-daacd98e" -> null
+      - bucket                      = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - bucket_domain_name          = "srinidhi-24bcs10037-s18-daacd98e.s3.amazonaws.com" -> null
+      - bucket_namespace            = "global" -> null
+      - bucket_region               = "ap-south-1" -> null
+      - bucket_regional_domain_name = "srinidhi-24bcs10037-s18-daacd98e.s3.ap-south-1.amazonaws.com" -> null
+      - force_destroy               = true -> null
+      - hosted_zone_id              = "Z11RGJOFQNVJUP" -> null
+      - id                          = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - object_lock_enabled         = false -> null
+      - region                      = "ap-south-1" -> null
+      - request_payer               = "BucketOwner" -> null
+      - tags                        = {} -> null
+      - tags_all                    = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Owner"       = "srinidhi-24bcs10037"
+          - "Project"     = "s18-terraform-s3-demo"
+        } -> null
+        # (3 unchanged attributes hidden)
+
+      - grant {
+          - id          = "f36fc2942619b473149770f0e968a8866f04711a87f258a72c5ec39a4a233b5e" -> null
+          - permissions = [
+              - "FULL_CONTROL",
+            ] -> null
+          - type        = "CanonicalUser" -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - server_side_encryption_configuration {
+          - rule {
+              - bucket_key_enabled = false -> null
+
+              - apply_server_side_encryption_by_default {
+                  - sse_algorithm     = "AES256" -> null
+                    # (1 unchanged attribute hidden)
+                }
+            }
+        }
+
+      - versioning {
+          - enabled    = true -> null
+          - mfa_delete = false -> null
+        }
+    }
+
+  # aws_s3_bucket_ownership_controls.demo will be destroyed
+  - resource "aws_s3_bucket_ownership_controls" "demo" {
+      - bucket = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - id     = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - region = "ap-south-1" -> null
+
+      - rule {
+          - object_ownership = "BucketOwnerEnforced" -> null
+        }
+    }
+
+  # aws_s3_bucket_public_access_block.demo will be destroyed
+  - resource "aws_s3_bucket_public_access_block" "demo" {
+      - block_public_acls       = true -> null
+      - block_public_policy     = true -> null
+      - bucket                  = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - id                      = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - ignore_public_acls      = true -> null
+      - region                  = "ap-south-1" -> null
+      - restrict_public_buckets = true -> null
+    }
+
+  # aws_s3_bucket_server_side_encryption_configuration.demo will be destroyed
+  - resource "aws_s3_bucket_server_side_encryption_configuration" "demo" {
+      - bucket                = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - id                    = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - region                = "ap-south-1" -> null
+        # (1 unchanged attribute hidden)
+
+      - rule {
+          - blocked_encryption_types = [
+              - "SSE-C",
+            ] -> null
+          - bucket_key_enabled       = false -> null
+
+          - apply_server_side_encryption_by_default {
+              - sse_algorithm     = "AES256" -> null
+                # (1 unchanged attribute hidden)
+            }
+        }
+    }
+
+  # aws_s3_bucket_versioning.demo will be destroyed
+  - resource "aws_s3_bucket_versioning" "demo" {
+      - bucket                = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - id                    = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - region                = "ap-south-1" -> null
+        # (1 unchanged attribute hidden)
+
+      - versioning_configuration {
+          - mfa_delete = "Disabled" -> null
+          - status     = "Enabled" -> null
+        }
+    }
+
+  # aws_s3_object.hello will be destroyed
+  - resource "aws_s3_object" "hello" {
+      - arn                           = "arn:aws:s3:::srinidhi-24bcs10037-s18-daacd98e/demo/hello.txt" -> null
+      - bucket                        = "srinidhi-24bcs10037-s18-daacd98e" -> null
+      - bucket_key_enabled            = false -> null
+      - content                       = "Hello from Terraform - Srinidhi Narendran 24BCS10037" -> null
+      - content_type                  = "binary/octet-stream" -> null
+      - etag                          = "6dc036bed0ab8a2f1f437bdc61146dce" -> null
+      - force_destroy                 = false -> null
+      - id                            = "srinidhi-24bcs10037-s18-daacd98e/demo/hello.txt" -> null
+      - key                           = "demo/hello.txt" -> null
+      - metadata                      = {} -> null
+      - region                        = "ap-south-1" -> null
+      - server_side_encryption        = "AES256" -> null
+      - storage_class                 = "STANDARD" -> null
+      - tags                          = {} -> null
+      - tags_all                      = {} -> null
+      - version_id                    = "DgrVvCcOrYAYddZa02jOkfjRY1UdoDSF" -> null
+        # (13 unchanged attributes hidden)
+    }
+
+  # random_id.suffix will be destroyed
+  - resource "random_id" "suffix" {
+      - b64_std     = "2qzZjg==" -> null
+      - b64_url     = "2qzZjg" -> null
+      - byte_length = 4 -> null
+      - dec         = "3668760974" -> null
+      - hex         = "daacd98e" -> null
+      - id          = "2qzZjg" -> null
+    }
+
+Plan: 0 to add, 0 to change, 7 to destroy.
+
+Changes to Outputs:
+  - bucket_arn        = "arn:aws:s3:::srinidhi-24bcs10037-s18-daacd98e" -> null
+  - bucket_name       = "srinidhi-24bcs10037-s18-daacd98e" -> null
+  - bucket_region     = "ap-south-1" -> null
+  - demo_object_key   = "demo/hello.txt" -> null
+  - versioning_status = "Enabled" -> null
+aws_s3_object.hello: Destroying... [id=srinidhi-24bcs10037-s18-daacd98e/demo/hello.txt]
+aws_s3_object.hello: Destruction complete after 1s
+aws_s3_bucket_ownership_controls.demo: Destroying... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_public_access_block.demo: Destroying... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_versioning.demo: Destroying... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_server_side_encryption_configuration.demo: Destroying... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket_server_side_encryption_configuration.demo: Destruction complete after 1s
+aws_s3_bucket_public_access_block.demo: Destruction complete after 1s
+aws_s3_bucket_ownership_controls.demo: Destruction complete after 2s
+aws_s3_bucket_versioning.demo: Destruction complete after 2s
+aws_s3_bucket.demo: Destroying... [id=srinidhi-24bcs10037-s18-daacd98e]
+aws_s3_bucket.demo: Destruction complete after 1s
+random_id.suffix: Destroying... [id=2qzZjg]
+random_id.suffix: Destruction complete after 0s
+
+Destroy complete! Resources: 7 destroyed.
+
+$ terraform state list | wc -l; aws s3api head-bucket --bucket srinidhi-24bcs10037-s18-daacd98e 2>&1 || true; aws s3api list-buckets --query "Buckets[?starts_with(Name, \`srinidhi-24bcs10037-s18\`)].Name" --output text; echo "(empty line above = no s18 buckets left)"
+       0
+
+aws: [ERROR]: An error occurred (404) when calling the HeadBucket operation: Not Found
+(empty line above = no s18 buckets left)
+

@@ -31,3 +31,7 @@ crash.log
 .vscode/
 *.log
 kubeconfig*
+
+# saved plan files (can contain sensitive values)
+tfplan
+*.plan

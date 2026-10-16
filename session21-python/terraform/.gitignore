@@ -4,3 +4,7 @@
 *.tfplan
 crash.log
 terraform.tfvars
+
+# saved plan files (can contain sensitive values)
+tfplan
+*.plan

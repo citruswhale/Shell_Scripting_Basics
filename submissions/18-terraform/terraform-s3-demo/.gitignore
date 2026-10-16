@@ -1,0 +1,11 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+# terraform.tfvars is a required deliverable here and holds no secrets,
+# so it is not ignored.
+
+# saved plan files (can contain sensitive values)
+tfplan
+*.plan
