@@ -1,0 +1,16 @@
+# GitOps flow on EKS: each push to master -> green pipeline -> bot commit with the new image tag -> Argo CD sync
+$ kubectl get application gearloan -n argocd -o jsonpath="{range .status.history[*]}..."
+0  a7e4837189ace79ed82590991b27d7531ee8cf9f  2026-10-16T21:51:33Z
+1  c7959526e420c46d8008a5e95748a5f2df28c861  2026-10-16T22:11:15Z
+2  09863ed06ab2b8aa89efd8ce022ada7e33c53b09  2026-10-16T22:53:32Z
+
+$ git log --oneline -6 --format="%h %an %s"
+09863ed github-actions[bot]  ci: deploy gearloan cea8e2a [skip ci]
+cea8e2a citruswhale  Capstone: node security group rules for ingress (port 80 between nodes, NodePort 30080 from one IP) while ELB is not enabled on the account; AWS Console screenshots
+c795952 github-actions[bot]  ci: deploy gearloan 8ea89f2 [skip ci]
+8ea89f2 citruswhale  Capstone: EKS run on m7i-flex.large nodes (Free plan blocks t3.medium), bootstrap script and EKS evidence
+a7e4837 citruswhale  Hide the AWS account id in the Terraform run logs
+1c5e3a9 github-actions[bot]  ci: deploy gearloan ca56b95 [skip ci]
+
+$ curl -s http://13.232.136.172:30080/api/info
+{"name":"GearLoan","version":"1.0.0-cea8e2a"}
