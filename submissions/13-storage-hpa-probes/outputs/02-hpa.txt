@@ -1,0 +1,121 @@
+$ kubectl get deploy metrics-server -n kube-system; kubectl top nodes
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+metrics-server   1/1     1            1           17m
+NAME         CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+devops-lab   154m         1%       1090Mi          9%          
+
+$ kubectl apply -f hpa.yml && kubectl rollout status deploy/web -n s13-hpa --timeout=120s
+namespace/s13-hpa created
+deployment.apps/web created
+service/web created
+horizontalpodautoscaler.autoscaling/web created
+Waiting for deployment "web" rollout to finish: 0 of 1 updated replicas are available...
+deployment "web" successfully rolled out
+
+$ kubectl get hpa web -n s13-hpa; kubectl top pods -n s13-hpa
+NAME   REFERENCE        TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+web    Deployment/web   cpu: 2%/50%   1         6         1          76s
+NAME                   CPU(cores)   MEMORY(bytes)   
+web-7584b47678-hnf7p   1m           8Mi             
+
+$ kubectl describe hpa web -n s13-hpa | sed -n "/Metrics:/,/Events/p"
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  2% (1m) / 50%
+Min replicas:                                          1
+Max replicas:                                          6
+Behavior:
+  Scale Up:
+    Stabilization Window: 0 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Pods     Value: 4    Period: 15 seconds
+      - Type: Percent  Value: 100  Period: 15 seconds
+  Scale Down:
+    Stabilization Window: 60 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Percent  Value: 100  Period: 15 seconds
+Deployment pods:       1 current / 1 desired
+Conditions:
+  Type            Status  Reason              Message
+  ----            ------  ------              -------
+  AbleToScale     True    ReadyForNewScale    recommended size matches current size
+  ScalingActive   True    ValidMetricFound    the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  False   DesiredWithinRange  the desired count is within the acceptable range
+Events:
+
+$ kubectl apply -f load-generator.yaml && kubectl rollout status deploy/load-generator -n s13-hpa --timeout=120s
+deployment.apps/load-generator created
+Waiting for deployment "load-generator" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "load-generator" rollout to finish: 1 of 3 updated replicas are available...
+Waiting for deployment "load-generator" rollout to finish: 2 of 3 updated replicas are available...
+deployment "load-generator" successfully rolled out
+
+$ kubectl top pods -n s13-hpa
+NAME                              CPU(cores)   MEMORY(bytes)   
+load-generator-86f8cdf745-lhpr5   301m         3Mi             
+load-generator-86f8cdf745-pjfw4   301m         4Mi             
+load-generator-86f8cdf745-qwn9k   301m         5Mi             
+web-7584b47678-hnf7p              62m          10Mi            
+
+$ kubectl get hpa web -n s13-hpa; kubectl get pods -n s13-hpa -l app=web -o wide
+NAME   REFERENCE        TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+web    Deployment/web   cpu: 72%/50%   1         6         3          4m17s
+NAME                   READY   STATUS    RESTARTS   AGE     IP             NODE         NOMINATED NODE   READINESS GATES
+web-7584b47678-2c29d   1/1     Running   0          2m2s    10.244.0.126   devops-lab   <none>           <none>
+web-7584b47678-96dgc   1/1     Running   0          2s      10.244.0.128   devops-lab   <none>           <none>
+web-7584b47678-hnf7p   1/1     Running   0          4m17s   10.244.0.122   devops-lab   <none>           <none>
+web-7584b47678-vclr7   1/1     Running   0          2s      10.244.0.129   devops-lab   <none>           <none>
+web-7584b47678-w79zc   1/1     Running   0          2m2s    10.244.0.127   devops-lab   <none>           <none>
+
+$ kubectl top pods -n s13-hpa
+NAME                              CPU(cores)   MEMORY(bytes)   
+load-generator-86f8cdf745-lhpr5   300m         6Mi             
+load-generator-86f8cdf745-pjfw4   300m         6Mi             
+load-generator-86f8cdf745-qwn9k   301m         7Mi             
+web-7584b47678-2c29d              36m          9Mi             
+web-7584b47678-hnf7p              36m          10Mi            
+web-7584b47678-w79zc              36m          9Mi             
+
+$ kubectl describe hpa web -n s13-hpa | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason                        Age                    From                       Message
+  ----     ------                        ----                   ----                       -------
+  Warning  FailedGetResourceMetric       3m17s (x5 over 4m17s)  horizontal-pod-autoscaler  failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedComputeMetricsReplicas  3m17s (x5 over 4m17s)  horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Normal   SuccessfulRescale             2m2s                   horizontal-pod-autoscaler  New size: 3; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             2s                     horizontal-pod-autoscaler  New size: 5; reason: cpu resource utilization (percentage of request) above target
+
+$ kubectl delete deploy load-generator -n s13-hpa
+deployment.apps "load-generator" deleted from s13-hpa namespace
+
+$ kubectl get hpa web -n s13-hpa; kubectl get pods -n s13-hpa -l app=web
+NAME   REFERENCE        TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+web    Deployment/web   cpu: 0%/50%   1         6         5          6m48s
+NAME                   READY   STATUS    RESTARTS   AGE
+web-7584b47678-2c29d   1/1     Running   0          4m33s
+web-7584b47678-96dgc   1/1     Running   0          2m33s
+web-7584b47678-hnf7p   1/1     Running   0          6m48s
+web-7584b47678-vclr7   1/1     Running   0          2m33s
+web-7584b47678-w79zc   1/1     Running   0          4m33s
+
+# watching the scale-down after the load generator was deleted (one line every 15 s)
+21:00:28  cpu: 0%/50% replicas=5
+21:00:43  cpu: 0%/50% replicas=1
+
+$ kubectl get hpa web -n s13-hpa; kubectl get pods -n s13-hpa
+NAME   REFERENCE        TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+web    Deployment/web   cpu: 0%/50%   1         6         1          7m24s
+NAME                   READY   STATUS    RESTARTS   AGE
+web-7584b47678-hnf7p   1/1     Running   0          7m24s
+
+$ kubectl describe hpa web -n s13-hpa | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason                        Age                    From                       Message
+  ----     ------                        ----                   ----                       -------
+  Warning  FailedGetResourceMetric       6m24s (x5 over 7m24s)  horizontal-pod-autoscaler  failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedComputeMetricsReplicas  6m24s (x5 over 7m24s)  horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Normal   SuccessfulRescale             5m9s                   horizontal-pod-autoscaler  New size: 3; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             3m9s                   horizontal-pod-autoscaler  New size: 5; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             24s                    horizontal-pod-autoscaler  New size: 1; reason: All metrics below target
+

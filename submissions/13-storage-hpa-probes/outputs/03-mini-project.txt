@@ -1,0 +1,201 @@
+$ kubectl apply -f namespace.yaml && kubectl apply -f pvc.yaml && kubectl wait -n production-webapp --for=jsonpath="{.status.phase}"=Bound pvc/web-data --timeout=60s && kubectl get pvc -n production-webapp
+namespace/production-webapp created
+persistentvolumeclaim/web-data created
+persistentvolumeclaim/web-data condition met
+NAME       STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+web-data   Bound    pvc-85799592-f7b5-42ea-a596-2d8f4799c4cb   500Mi      RWO            standard       <unset>                 1s
+
+$ kubectl apply -f deployment.yaml -f service.yaml && kubectl rollout status deploy/web-app -n production-webapp --timeout=180s && kubectl get pods -n production-webapp -o wide
+deployment.apps/web-app created
+service/web-service created
+Waiting for deployment "web-app" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "web-app" rollout to finish: 1 of 2 updated replicas are available...
+deployment "web-app" successfully rolled out
+NAME                      READY   STATUS    RESTARTS   AGE   IP             NODE         NOMINATED NODE   READINESS GATES
+web-app-d45775485-h2rq8   1/1     Running   0          8s    10.244.0.131   devops-lab   <none>           <none>
+web-app-d45775485-jd9p6   1/1     Running   0          8s    10.244.0.130   devops-lab   <none>           <none>
+
+$ kubectl apply -f hpa.yaml; for i in $(seq 1 24); do kubectl get hpa web-app-hpa -n production-webapp --no-headers | grep -q "cpu: [0-9]" && break; sleep 5; done; kubectl get hpa -n production-webapp
+horizontalpodautoscaler.autoscaling/web-app-hpa created
+NAME          REFERENCE            TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+web-app-hpa   Deployment/web-app   cpu: 1%/50%   2         5         2          76s
+
+# Task 1 - storage persistence
+$ POD=$(kubectl get pods -n production-webapp -l app=web-app -o jsonpath="{.items[0].metadata.name}"); echo "writing from $POD"; kubectl exec -n production-webapp $POD -- sh -c "echo \"Student: Srinidhi Narendran (24BCS10037)\" > /data/student.txt; cat /data/student.txt"
+writing from web-app-d45775485-h2rq8
+Student: Srinidhi Narendran (24BCS10037)
+
+$ kubectl delete pods -n production-webapp -l app=web-app && kubectl rollout status deploy/web-app -n production-webapp --timeout=180s && kubectl get pods -n production-webapp
+pod "web-app-d45775485-h2rq8" deleted from production-webapp namespace
+pod "web-app-d45775485-jd9p6" deleted from production-webapp namespace
+Waiting for deployment "web-app" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "web-app" rollout to finish: 1 of 2 updated replicas are available...
+deployment "web-app" successfully rolled out
+NAME                      READY   STATUS    RESTARTS   AGE
+web-app-d45775485-qmrql   1/1     Running   0          9s
+web-app-d45775485-w7mcf   1/1     Running   0          9s
+
+$ for P in $(kubectl get pods -n production-webapp -l app=web-app -o jsonpath="{.items[*].metadata.name}"); do echo "$P: $(kubectl exec -n production-webapp $P -- cat /data/student.txt)"; done
+web-app-d45775485-qmrql: Student: Srinidhi Narendran (24BCS10037)
+web-app-d45775485-w7mcf: Student: Srinidhi Narendran (24BCS10037)
+
+# Task 2 - service
+$ kubectl run curl -n production-webapp --image=curlimages/curl:8.11.1 --rm -i --restart=Never -- curl -s -o /dev/null -w "web-service -> HTTP %{http_code}
+" http://web-service 2>/dev/null | grep HTTP
+web-service -> HTTP 200
+web-service -> HTTP 200
+
+$ curl -s http://localhost:8089 | grep -o "<title>.*</title>"   # from my Mac through kubectl port-forward
+<title>Welcome to nginx!</title>
+
+# Task 3 - HPA under load
+$ kubectl create deployment load-generator -n production-webapp --image=busybox:1.36 --replicas=3 -- sh -c "while true; do wget -q -O- http://web-service >/dev/null; done"
+deployment.apps/load-generator created
+
+21:04:28  cpu: 84%/50% replicas=2
+21:04:43  cpu: 84%/50% replicas=4
+21:04:58  cpu: 84%/50% replicas=4
+21:05:13  cpu: 84%/50% replicas=4
+21:05:28  cpu: 57%/50% replicas=4
+21:05:43  cpu: 57%/50% replicas=4
+21:05:58  cpu: 57%/50% replicas=4
+21:06:13  cpu: 57%/50% replicas=4
+21:06:28  cpu: 42%/50% replicas=4
+21:06:43  cpu: 42%/50% replicas=4
+21:06:58  cpu: 42%/50% replicas=4
+21:07:13  cpu: 42%/50% replicas=4
+21:07:29  cpu: 41%/50% replicas=4
+21:07:44  cpu: 41%/50% replicas=4
+21:07:59  cpu: 41%/50% replicas=4
+21:08:14  cpu: 41%/50% replicas=4
+21:08:29  cpu: 42%/50% replicas=4
+21:08:44  cpu: 42%/50% replicas=4
+21:08:59  cpu: 42%/50% replicas=4
+21:09:14  cpu: 42%/50% replicas=4
+21:09:30  cpu: 46%/50% replicas=4
+21:09:45  cpu: 46%/50% replicas=4
+21:10:00  cpu: 46%/50% replicas=4
+
+$ kubectl top pods -n production-webapp -l app=web-app; kubectl get pods -n production-webapp -l app=web-app
+NAME                      CPU(cores)   MEMORY(bytes)   
+web-app-d45775485-9gf28   47m          9Mi             
+web-app-d45775485-9w2sv   46m          10Mi            
+web-app-d45775485-qmrql   45m          9Mi             
+web-app-d45775485-w7mcf   47m          10Mi            
+NAME                      READY   STATUS    RESTARTS   AGE
+web-app-d45775485-9gf28   1/1     Running   0          5m48s
+web-app-d45775485-9w2sv   1/1     Running   0          5m48s
+web-app-d45775485-qmrql   1/1     Running   0          7m47s
+web-app-d45775485-w7mcf   1/1     Running   0          7m47s
+
+$ kubectl delete deployment load-generator -n production-webapp
+deployment.apps "load-generator" deleted from production-webapp namespace
+
+21:10:15  cpu: 46%/50% replicas=4
+21:10:35  cpu: 47%/50% replicas=4
+21:10:55  cpu: 47%/50% replicas=4
+21:11:16  cpu: 47%/50% replicas=4
+21:11:36  cpu: 26%/50% replicas=4
+21:11:56  cpu: 26%/50% replicas=4
+21:12:16  cpu: 26%/50% replicas=4
+21:12:36  cpu: 1%/50% replicas=4
+21:12:57  cpu: 1%/50% replicas=4
+21:13:17  cpu: 1%/50% replicas=4
+21:13:37  cpu: 1%/50% replicas=4
+21:13:57  cpu: 1%/50% replicas=4
+21:14:17  cpu: 1%/50% replicas=4
+21:14:37  cpu: 1%/50% replicas=4
+21:14:57  cpu: 1%/50% replicas=4
+21:15:17  cpu: 1%/50% replicas=4
+21:15:37  cpu: 1%/50% replicas=4
+21:15:58  cpu: 1%/50% replicas=4
+21:16:18  cpu: 1%/50% replicas=4
+21:16:38  cpu: 1%/50% replicas=3
+21:16:58  cpu: 1%/50% replicas=3
+21:17:18  cpu: 1%/50% replicas=3
+21:17:38  cpu: 1%/50% replicas=2
+
+$ kubectl get events -n production-webapp --field-selector involvedObject.kind=HorizontalPodAutoscaler,reason=SuccessfulRescale -o custom-columns=TIME:.lastTimestamp,MESSAGE:.message
+TIME                   MESSAGE
+2026-10-16T19:04:27Z   New size: 4; reason: cpu resource utilization (percentage of request) above target
+2026-10-16T19:16:12Z   New size: 3; reason: All metrics below target
+2026-10-16T19:17:12Z   New size: 2; reason: All metrics below target
+
+# Task 4 - probes: readiness failure and recovery
+$ kubectl patch hpa web-app-hpa -n production-webapp -p "{\"spec\":{\"minReplicas\":2,\"maxReplicas\":2}}"   # pin to 2 Pods so the HPA does not change things during the probe tests
+horizontalpodautoscaler.autoscaling/web-app-hpa patched
+
+$ kubectl patch deploy web-app -n production-webapp --type json -p "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/readinessProbe/httpGet/path\",\"value\":\"/does-not-exist\"}]" && kubectl rollout status deploy/web-app -n production-webapp --timeout=30s; sleep 20
+deployment.apps/web-app patched
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 of 2 updated replicas are available...
+error: timed out waiting for the condition
+
+$ kubectl get pods -n production-webapp -l app=web-app
+NAME                       READY   STATUS    RESTARTS   AGE
+web-app-5945bfc776-bsx85   0/1     Running   0          50s
+web-app-5945bfc776-sv5qk   0/1     Running   0          50s
+
+$ kubectl get endpointslices -n production-webapp -l kubernetes.io/service-name=web-service -o jsonpath="{range .items[*].endpoints[*]}{.addresses[0]} ready={.conditions.ready}{\"
+\"}{end}"
+10.244.0.167 ready=false
+10.244.0.168 ready=false
+
+$ P=$(kubectl get pod -n production-webapp -l app=web-app -o name | head -1); kubectl describe $P -n production-webapp | grep -E "Readiness|Unhealthy" | tail -2
+    Readiness:    http-get http://:80/does-not-exist delay=5s timeout=2s period=5s successThreshold=1 failureThreshold=2
+  Warning  Unhealthy  1s (x9 over 41s)  kubelet            spec.containers{nginx}: Readiness probe failed: HTTP probe failed with statuscode: 404
+
+$ kubectl run c -n production-webapp --image=curlimages/curl:8.11.1 --rm -i --restart=Never --quiet -- curl -s -m 5 -o /dev/null -w "web-service -> HTTP %{http_code}
+" http://web-service </dev/null 2>/dev/null; true
+web-service -> HTTP 000
+web-service -> HTTP 000
+
+$ kubectl patch deploy web-app -n production-webapp --type json -p "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/readinessProbe/httpGet/path\",\"value\":\"/\"}]" && kubectl rollout status deploy/web-app -n production-webapp --timeout=120s && sleep 5 && kubectl get pods -n production-webapp -l app=web-app
+deployment.apps/web-app patched
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "web-app" rollout to finish: 1 of 2 updated replicas are available...
+deployment "web-app" successfully rolled out
+NAME                      READY   STATUS    RESTARTS   AGE
+web-app-d45775485-cc6z5   1/1     Running   0          13s
+web-app-d45775485-gt2zt   1/1     Running   0          13s
+
+$ kubectl get endpointslices -n production-webapp -l kubernetes.io/service-name=web-service -o jsonpath="{range .items[*].endpoints[*]}{.addresses[0]} ready={.conditions.ready}{\"
+\"}{end}"
+10.244.0.170 ready=true
+10.244.0.171 ready=true
+
+# Task 5 - probes: liveness failure and recovery
+$ kubectl patch deploy web-app -n production-webapp --type json -p "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/livenessProbe/httpGet/path\",\"value\":\"/crash\"}]" && sleep 50 && kubectl get pods -n production-webapp -l app=web-app
+deployment.apps/web-app patched
+NAME                      READY   STATUS    RESTARTS     AGE
+web-app-85d86b65d-wpsf6   0/1     Running   3 (5s ago)   50s
+web-app-85d86b65d-xql7c   0/1     Running   3 (5s ago)   50s
+
+$ P=$(kubectl get pod -n production-webapp -l app=web-app -o name | head -1); kubectl describe $P -n production-webapp | sed -n "/Events:/,\$p" | grep -E "Liveness|Killing|Unhealthy"
+  Warning  Unhealthy  5s (x9 over 45s)  kubelet            spec.containers{nginx}: Liveness probe failed: HTTP probe failed with statuscode: 404
+  Normal   Killing    5s (x3 over 35s)  kubelet            spec.containers{nginx}: Container nginx failed liveness probe, will be restarted
+
+$ kubectl patch deploy web-app -n production-webapp --type json -p "[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/livenessProbe/httpGet/path\",\"value\":\"/\"}]" && kubectl rollout status deploy/web-app -n production-webapp --timeout=120s && sleep 40 && kubectl get pods -n production-webapp -l app=web-app
+deployment.apps/web-app patched
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 out of 2 new replicas have been updated...
+Waiting for deployment "web-app" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "web-app" rollout to finish: 1 of 2 updated replicas are available...
+deployment "web-app" successfully rolled out
+NAME                      READY   STATUS    RESTARTS   AGE
+web-app-d45775485-8xfp2   1/1     Running   0          49s
+web-app-d45775485-k7rcr   1/1     Running   0          49s
+
+$ for P in $(kubectl get pods -n production-webapp -l app=web-app -o jsonpath="{.items[*].metadata.name}"); do echo "$P: $(kubectl exec -n production-webapp $P -- cat /data/student.txt)"; done   # data still there after all these restarts
+web-app-d45775485-8xfp2: Student: Srinidhi Narendran (24BCS10037)
+web-app-d45775485-k7rcr: Student: Srinidhi Narendran (24BCS10037)
+

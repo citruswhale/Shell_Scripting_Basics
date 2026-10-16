@@ -1,0 +1,88 @@
+$ kubectl apply -f examples/01-emptydir.yaml && kubectl wait -n s13 --for=condition=Ready pod/emptydir-demo --timeout=90s && sleep 11
+pod/emptydir-demo created
+pod/emptydir-demo condition met
+
+$ kubectl exec -n s13 emptydir-demo -c reader -- cat /shared/log.txt
+Fri Oct 16 18:50:25 UTC 2026
+Fri Oct 16 18:50:30 UTC 2026
+Fri Oct 16 18:50:35 UTC 2026
+
+$ kubectl delete pod emptydir-demo -n s13 && kubectl apply -f examples/01-emptydir.yaml && kubectl wait -n s13 --for=condition=Ready pod/emptydir-demo --timeout=90s && kubectl exec -n s13 emptydir-demo -c reader -- cat /shared/log.txt   # new Pod = new empty folder
+pod "emptydir-demo" deleted from s13 namespace
+pod/emptydir-demo created
+pod/emptydir-demo condition met
+Fri Oct 16 18:51:07 UTC 2026
+
+$ kubectl apply -f examples/02-hostpath.yaml && kubectl wait -n s13 --for=condition=Ready pod/hostpath-demo --timeout=90s && kubectl delete pod hostpath-demo -n s13 && kubectl apply -f examples/02-hostpath.yaml && kubectl wait -n s13 --for=condition=Ready pod/hostpath-demo --timeout=90s
+pod/hostpath-demo created
+pod/hostpath-demo condition met
+pod "hostpath-demo" deleted from s13 namespace
+pod/hostpath-demo created
+pod/hostpath-demo condition met
+
+$ kubectl exec -n s13 hostpath-demo -- cat /node-data/notes.txt
+written by hostpath-demo at Fri Oct 16 18:51:08 UTC 2026
+written by hostpath-demo at Fri Oct 16 18:51:39 UTC 2026
+
+$ minikube ssh -p devops-lab -- cat /tmp/s13-hostpath/notes.txt   # the same file, directly on the node
+written by hostpath-demo at Fri Oct 16 18:51:08 UTC 2026
+written by hostpath-demo at Fri Oct 16 18:51:39 UTC 2026
+
+$ kubectl get sc
+NAME                 PROVISIONER                RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+standard (default)   k8s.io/minikube-hostpath   Delete          Immediate           false                  71m
+
+$ kubectl apply -f examples/03-static-pv.yaml && kubectl wait -n s13 --for=jsonpath="{.status.phase}"=Bound pvc/manual-claim --timeout=120s && kubectl get pv s13-manual-pv && kubectl get pvc manual-claim -n s13
+persistentvolume/s13-manual-pv created
+persistentvolumeclaim/manual-claim created
+persistentvolumeclaim/manual-claim condition met
+NAME            CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM              STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+s13-manual-pv   200Mi      RWO            Retain           Bound    s13/manual-claim   manual         <unset>                          0s
+NAME           STATUS   VOLUME          CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+manual-claim   Bound    s13-manual-pv   200Mi      RWO            manual         <unset>                 0s
+
+$ kubectl apply -f examples/04-storageclass-dynamic.yaml && kubectl wait -n s13 --for=jsonpath="{.status.phase}"=Bound pvc/dynamic-claim --timeout=120s && kubectl get pvc -n s13 && kubectl get pv
+storageclass.storage.k8s.io/s13-fast created
+persistentvolumeclaim/dynamic-claim created
+pod/pvc-user created
+persistentvolumeclaim/dynamic-claim condition met
+NAME            STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+dynamic-claim   Bound    pvc-f7ade0c6-170b-46bf-8cdb-8634e09e5840   100Mi      RWO            s13-fast       <unset>                 0s
+manual-claim    Bound    s13-manual-pv                              200Mi      RWO            manual         <unset>                 0s
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM               STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-f7ade0c6-170b-46bf-8cdb-8634e09e5840   100Mi      RWO            Delete           Bound    s13/dynamic-claim   s13-fast       <unset>                          0s
+s13-manual-pv                              200Mi      RWO            Retain           Bound    s13/manual-claim    manual         <unset>                          0s
+
+$ kubectl describe pvc dynamic-claim -n s13 | sed -n "/Events:/,\$p"
+Events:
+  Type    Reason                 Age              From                                                                      Message
+  ----    ------                 ----             ----                                                                      -------
+  Normal  ExternalProvisioning   0s (x2 over 0s)  persistentvolume-controller                                               Waiting for a volume to be created either by the external provisioner 'k8s.io/minikube-hostpath' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
+  Normal  Provisioning           0s               k8s.io/minikube-hostpath_devops-lab_2b44d17f-abbd-4fdc-b49f-49c6e47f31f5  External provisioner is provisioning volume for claim "s13/dynamic-claim"
+  Normal  ProvisioningSucceeded  0s               k8s.io/minikube-hostpath_devops-lab_2b44d17f-abbd-4fdc-b49f-49c6e47f31f5  Successfully provisioned volume pvc-f7ade0c6-170b-46bf-8cdb-8634e09e5840
+
+$ kubectl wait -n s13 --for=condition=Ready pod/pvc-user --timeout=120s && kubectl exec -n s13 pvc-user -- sh -c "echo loan-record-001 > /data/records.txt; echo hello-manual > /manual/hello.txt; ls -l /data /manual"
+pod/pvc-user condition met
+/data:
+total 4
+-rw-r--r--    1 root     root            16 Oct 16 18:51 records.txt
+
+/manual:
+total 4
+-rw-r--r--    1 root     root            13 Oct 16 18:51 hello.txt
+
+$ kubectl delete pod pvc-user -n s13 && kubectl apply -f examples/04-storageclass-dynamic.yaml >/dev/null && kubectl wait -n s13 --for=condition=Ready pod/pvc-user --timeout=120s && kubectl exec -n s13 pvc-user -- sh -c "cat /data/records.txt /manual/hello.txt"   # new Pod, same data
+pod "pvc-user" deleted from s13 namespace
+pod/pvc-user condition met
+loan-record-001
+hello-manual
+
+$ kubectl delete ns s13 --wait=true --timeout=120s; sleep 5; kubectl get pv   # Delete policy removes the dynamic PV; Retain keeps the manual one
+namespace "s13" deleted
+NAME            CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS     CLAIM              STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+s13-manual-pv   200Mi      RWO            Retain           Released   s13/manual-claim   manual         <unset>                          85s
+
+$ kubectl delete pv s13-manual-pv; kubectl delete sc s13-fast
+persistentvolume "s13-manual-pv" deleted
+storageclass.storage.k8s.io "s13-fast" deleted
+
