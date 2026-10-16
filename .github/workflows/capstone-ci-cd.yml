@@ -18,6 +18,10 @@ on:
     paths:
       - "session21-python/**"
       - ".github/workflows/capstone-ci-cd.yml"
+      # docs, screenshots and the demo folder don't change the app, so they don't need a new build
+      - "!session21-python/evidence/**"
+      - "!session21-python/demo/**"
+      - "!session21-python/**/*.md"
   workflow_dispatch:
 
 # Default for every job: read-only. Jobs that need more ask for it themselves.
