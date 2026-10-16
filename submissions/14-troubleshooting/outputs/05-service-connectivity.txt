@@ -1,0 +1,43 @@
+# BEFORE
+$ kubectl apply -f issues/05-service-connectivity/broken.yaml
+service/gear-web-svc created
+
+# INVESTIGATE
+$ kubectl exec -n s14 client -- curl -s -m 5 -o /dev/null -w "HTTP %{http_code}
+" http://gear-web-svc || echo "curl failed, exit $?"
+HTTP 000
+command terminated with exit code 7
+curl failed, exit 7
+
+$ kubectl get endpointslices -n s14 -l kubernetes.io/service-name=gear-web-svc
+NAME                 ADDRESSTYPE   PORTS   ENDPOINTS                   AGE
+gear-web-svc-cdbm8   IPv4          8080    10.244.0.141,10.244.0.140   6s
+
+$ kubectl describe svc gear-web-svc -n s14 | grep -E "Selector|Port|Endpoints"
+Selector:                 app=gear-web
+Port:                     <unset>  80/TCP
+TargetPort:               8080/TCP
+Endpoints:                10.244.0.141:8080,10.244.0.140:8080
+
+$ kubectl get pod -n s14 -l app=gear-web -o jsonpath="{.items[0].spec.containers[0].ports}"; echo
+[{"containerPort":80,"protocol":"TCP"}]
+
+$ P=$(kubectl get pod -n s14 -l app=gear-web -o jsonpath="{.items[0].status.podIP}"); kubectl exec -n s14 client -- curl -s -m 3 -o /dev/null -w "pod $P port 80 -> HTTP %{http_code}
+" http://$P:80; kubectl exec -n s14 client -- curl -s -m 3 http://$P:8080 || echo "pod $P port 8080 -> refused (exit $?)"
+pod 10.244.0.141 port 80 -> HTTP 200
+command terminated with exit code 7
+pod 10.244.0.141 port 8080 -> refused (exit 7)
+
+# FIX
+$ kubectl apply -f issues/05-service-connectivity/fixed.yaml && sleep 5
+service/gear-web-svc configured
+
+# AFTER
+$ kubectl get endpointslices -n s14 -l kubernetes.io/service-name=gear-web-svc
+NAME                 ADDRESSTYPE   PORTS   ENDPOINTS                   AGE
+gear-web-svc-cdbm8   IPv4          80      10.244.0.141,10.244.0.140   11s
+
+$ kubectl exec -n s14 client -- curl -s -m 5 -o /dev/null -w "HTTP %{http_code}
+" http://gear-web-svc
+HTTP 200
+

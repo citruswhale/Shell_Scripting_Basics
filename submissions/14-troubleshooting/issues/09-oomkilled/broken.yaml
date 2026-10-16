@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: oom
+  namespace: s14
+spec:
+  containers:
+    - name: report-builder
+      image: python:3.12-alpine
+      command: ["python3", "-u", "-c", "import time; data = bytearray(150 * 1024 * 1024); print('built report using 150 MiB'); time.sleep(3600)"]
+      resources:
+        limits:
+          memory: 64Mi       # too small for what the app needs

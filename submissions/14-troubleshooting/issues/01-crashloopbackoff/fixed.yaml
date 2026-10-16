@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: crashloop
+  namespace: s14
+spec:
+  containers:
+    - name: api
+      image: python:3.12-alpine
+      command: ["python3", "-u", "-c"]
+      args:
+        - |
+          import os, sys, time
+          url = os.environ.get("DATABASE_URL")
+          if not url:
+              print("FATAL: DATABASE_URL is not set", file=sys.stderr); sys.exit(1)
+          print("connected to", url.split("@")[-1]); time.sleep(3600)
+      env:
+        - name: DATABASE_URL          # the fix: give the app what it needs
+          value: "postgresql://app@postgres.s14.svc.cluster.local:5432/gearloan"

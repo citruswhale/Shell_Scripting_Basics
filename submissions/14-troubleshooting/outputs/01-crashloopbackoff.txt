@@ -1,0 +1,37 @@
+# BEFORE
+$ kubectl apply -f issues/01-crashloopbackoff/broken.yaml
+pod/crashloop created
+
+# INVESTIGATE
+$ kubectl get pod crashloop -n s14
+NAME        READY   STATUS   RESTARTS      AGE
+crashloop   0/1     Error    2 (19s ago)   20s
+
+$ kubectl logs crashloop -n s14
+FATAL: DATABASE_URL is not set
+
+$ kubectl describe pod crashloop -n s14 | grep -E "State|Reason|Exit Code|Restart Count|Back-off"
+    State:          Terminated
+      Reason:       Error
+      Exit Code:    1
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    1
+    Restart Count:  2
+  Type     Reason     Age               From               Message
+  Warning  BackOff    7s (x2 over 18s)  kubelet            spec.containers{api}: Back-off restarting failed container api in pod crashloop_s14(98ba67e6-1d67-4450-8623-6849175a0adb)
+
+# FIX
+$ kubectl delete pod crashloop -n s14 && kubectl apply -f issues/01-crashloopbackoff/fixed.yaml && kubectl wait -n s14 --for=condition=Ready pod/crashloop --timeout=60s && sleep 2
+pod "crashloop" deleted from s14 namespace
+pod/crashloop created
+pod/crashloop condition met
+
+# AFTER
+$ kubectl get pod crashloop -n s14
+NAME        READY   STATUS    RESTARTS   AGE
+crashloop   1/1     Running   0          3s
+
+$ kubectl logs crashloop -n s14
+connected to postgres.s14.svc.cluster.local:5432/gearloan
+

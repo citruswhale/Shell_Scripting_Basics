@@ -1,0 +1,44 @@
+# BEFORE
+$ kubectl apply -f issues/09-oomkilled/broken.yaml
+pod/oom created
+
+# INVESTIGATE
+$ kubectl get pod oom -n s14
+NAME   READY   STATUS      RESTARTS      AGE
+oom    0/1     OOMKilled   2 (19s ago)   20s
+
+$ kubectl describe pod oom -n s14 | grep -E "State|Reason|Exit Code|Restart Count|Limits|memory:"
+    State:          Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+    Last State:     Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+    Restart Count:  2
+    Limits:
+      memory:  64Mi
+      memory:     64Mi
+  Type     Reason     Age               From               Message
+
+$ kubectl get pod oom -n s14 -o jsonpath="lastState: {.status.containerStatuses[0].lastState.terminated.reason} exit={.status.containerStatuses[0].lastState.terminated.exitCode}{\"
+\"}"
+lastState: OOMKilled exit=137
+
+# FIX
+$ kubectl delete pod oom -n s14 && kubectl apply -f issues/09-oomkilled/fixed.yaml && kubectl wait -n s14 --for=condition=Ready pod/oom --timeout=60s && sleep 70
+pod "oom" deleted from s14 namespace
+pod/oom created
+pod/oom condition met
+
+# AFTER
+$ kubectl get pod oom -n s14
+NAME   READY   STATUS    RESTARTS   AGE
+oom    1/1     Running   0          70s
+
+$ kubectl logs oom -n s14
+built report using 150 MiB
+
+$ kubectl top pod oom -n s14
+NAME   CPU(cores)   MEMORY(bytes)   
+oom    0m           153Mi           
+

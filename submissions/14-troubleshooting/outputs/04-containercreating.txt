@@ -1,0 +1,32 @@
+# BEFORE
+$ kubectl apply -f issues/04-containercreating/broken.yaml
+pod/creating created
+
+# INVESTIGATE
+$ kubectl get pod creating -n s14
+NAME       READY   STATUS              RESTARTS   AGE
+creating   0/1     ContainerCreating   0          20s
+
+$ kubectl describe pod creating -n s14 | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason       Age               From               Message
+  ----     ------       ----              ----               -------
+  Normal   Scheduled    20s               default-scheduler  Successfully assigned s14/creating to devops-lab
+  Warning  FailedMount  5s (x6 over 20s)  kubelet            MountVolume.SetUp failed for volume "tls" : secret "gear-web-tls" not found
+
+$ kubectl get secret gear-web-tls -n s14
+Error from server (NotFound): secrets "gear-web-tls" not found
+
+# FIX
+$ kubectl apply -f issues/04-containercreating/fixed.yaml && kubectl wait -n s14 --for=condition=Ready pod/creating --timeout=180s
+secret/gear-web-tls created
+pod/creating condition met
+
+# AFTER
+$ kubectl get pod creating -n s14
+NAME       READY   STATUS    RESTARTS   AGE
+creating   1/1     Running   0          32s
+
+$ kubectl exec -n s14 creating -- ls /etc/tls
+note.txt
+

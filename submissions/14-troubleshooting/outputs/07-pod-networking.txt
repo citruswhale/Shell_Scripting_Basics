@@ -1,0 +1,46 @@
+# BEFORE
+$ kubectl apply -f issues/07-pod-networking/broken.yaml
+deployment.apps/inventory-api created
+service/inventory-api created
+
+# INVESTIGATE
+$ kubectl get pods -n s14 -l app=inventory-api -o wide
+NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE         NOMINATED NODE   READINESS GATES
+inventory-api-6dcc647fb7-mlmrh   1/1     Running   0          3s    10.244.0.155   devops-lab   <none>           <none>
+
+$ kubectl exec -n s14 client -- curl -s -m 5 http://inventory-api || echo "curl failed, exit $?"
+command terminated with exit code 7
+curl failed, exit 7
+
+$ kubectl get endpointslices -n s14 -l kubernetes.io/service-name=inventory-api
+NAME                  ADDRESSTYPE   PORTS   ENDPOINTS      AGE
+inventory-api-b4t6c   IPv4          8000    10.244.0.155   4s
+
+$ P=$(kubectl get pod -n s14 -l app=inventory-api -o jsonpath="{.items[0].status.podIP}"); kubectl exec -n s14 client -- curl -s -m 3 http://$P:8000 || echo "direct to pod IP $P:8000 also fails (exit $?)"
+command terminated with exit code 7
+direct to pod IP 10.244.0.155:8000 also fails (exit 7)
+
+$ kubectl exec -n s14 deploy/inventory-api -- python3 -c "import urllib.request; print(\"from inside the pod:\", urllib.request.urlopen(\"http://127.0.0.1:8000\").status)"
+from inside the pod: 200
+
+$ kubectl exec -n s14 deploy/inventory-api -- sh -c "cat /proc/net/tcp | awk \"NR>1 && \\$4==\\"0A\\" {print \\"listening on\\", \\$2}\""
+listening on 0100007F:1F40
+
+# FIX
+$ kubectl apply -f issues/07-pod-networking/fixed.yaml && kubectl rollout status deploy/inventory-api -n s14 --timeout=90s && sleep 3
+deployment.apps/inventory-api configured
+service/inventory-api unchanged
+Waiting for deployment "inventory-api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "inventory-api" rollout to finish: 1 old replicas are pending termination...
+deployment "inventory-api" successfully rolled out
+
+# AFTER
+$ kubectl get pods -n s14 -l app=inventory-api
+NAME                             READY   STATUS        RESTARTS   AGE
+inventory-api-5656b7bb5d-jzf2v   1/1     Running       0          3s
+inventory-api-6dcc647fb7-mlmrh   1/1     Terminating   0          7s
+
+$ kubectl exec -n s14 client -- curl -s -m 5 -o /dev/null -w "HTTP %{http_code}
+" http://inventory-api
+HTTP 200
+

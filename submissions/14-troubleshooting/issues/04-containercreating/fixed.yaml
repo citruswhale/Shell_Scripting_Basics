@@ -1,0 +1,9 @@
+# the fix: create the missing Secret (demo values only). The Pod itself does not change.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gear-web-tls
+  namespace: s14
+type: Opaque
+stringData:
+  note.txt: "lab placeholder, not a real certificate"

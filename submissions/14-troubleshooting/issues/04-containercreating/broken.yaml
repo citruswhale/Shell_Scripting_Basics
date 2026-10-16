@@ -1,0 +1,18 @@
+# mounts a Secret that does not exist yet
+apiVersion: v1
+kind: Pod
+metadata:
+  name: creating
+  namespace: s14
+spec:
+  containers:
+    - name: web
+      image: nginx:1.27-alpine
+      volumeMounts:
+        - name: tls
+          mountPath: /etc/tls
+          readOnly: true
+  volumes:
+    - name: tls
+      secret:
+        secretName: gear-web-tls

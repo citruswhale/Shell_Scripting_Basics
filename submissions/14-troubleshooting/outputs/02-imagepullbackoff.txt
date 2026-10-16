@@ -1,0 +1,37 @@
+# BEFORE
+$ kubectl apply -f issues/02-imagepullbackoff/broken.yaml
+pod/imagepull created
+
+# INVESTIGATE
+$ kubectl get pod imagepull -n s14
+NAME        READY   STATUS             RESTARTS   AGE
+imagepull   0/1     ImagePullBackOff   0          15s
+
+$ kubectl describe pod imagepull -n s14 | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason     Age               From               Message
+  ----     ------     ----              ----               -------
+  Normal   Scheduled  15s               default-scheduler  Successfully assigned s14/imagepull to devops-lab
+  Warning  Failed     14s               kubelet            spec.containers{web}: Failed to pull image "nginx:1.27-alpinee": rpc error: code = NotFound desc = failed to pull and unpack image "docker.io/library/nginx:1.27-alpinee": failed to resolve reference "docker.io/library/nginx:1.27-alpinee": docker.io/library/nginx:1.27-alpinee: not found
+  Warning  Failed     14s               kubelet            spec.containers{web}: Error: ErrImagePull
+  Normal   BackOff    14s               kubelet            spec.containers{web}: Back-off pulling image "nginx:1.27-alpinee"
+  Warning  Failed     14s               kubelet            spec.containers{web}: Error: ImagePullBackOff
+  Normal   Pulling    0s (x2 over 15s)  kubelet            spec.containers{web}: Pulling image "nginx:1.27-alpinee"
+
+$ docker manifest inspect nginx:1.27-alpinee >/dev/null 2>&1 && echo "tag exists" || echo "nginx:1.27-alpinee: tag not found on Docker Hub"
+nginx:1.27-alpinee: tag not found on Docker Hub
+
+$ docker manifest inspect nginx:1.27-alpine >/dev/null 2>&1 && echo "nginx:1.27-alpine: tag exists"
+nginx:1.27-alpine: tag exists
+
+# FIX
+$ kubectl delete pod imagepull -n s14 && kubectl apply -f issues/02-imagepullbackoff/fixed.yaml && kubectl wait -n s14 --for=condition=Ready pod/imagepull --timeout=90s
+pod "imagepull" deleted from s14 namespace
+pod/imagepull created
+pod/imagepull condition met
+
+# AFTER
+$ kubectl get pod imagepull -n s14
+NAME        READY   STATUS    RESTARTS   AGE
+imagepull   1/1     Running   0          1s
+

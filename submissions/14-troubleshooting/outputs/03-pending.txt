@@ -1,0 +1,34 @@
+# BEFORE
+$ kubectl apply -f issues/03-pending/broken.yaml
+pod/pending created
+
+# INVESTIGATE
+$ kubectl get pod pending -n s14
+NAME      READY   STATUS    RESTARTS   AGE
+pending   0/1     Pending   0          8s
+
+$ kubectl describe pod pending -n s14 | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason            Age   From               Message
+  ----     ------            ----  ----               -------
+  Warning  FailedScheduling  8s    default-scheduler  0/1 nodes are available: 1 Insufficient cpu, 1 Insufficient memory. preemption: 0/1 nodes are available: 1 Preemption is not helpful for scheduling.
+
+$ kubectl describe node devops-lab | sed -n "/Capacity:/,/System Info/p" | grep -E "Capacity|Allocatable|cpu|memory"
+Capacity:
+  cpu:                10
+  memory:             12232784Ki
+Allocatable:
+  cpu:                10
+  memory:             12232784Ki
+
+# FIX
+$ kubectl delete pod pending -n s14 && kubectl apply -f issues/03-pending/fixed.yaml && kubectl wait -n s14 --for=condition=Ready pod/pending --timeout=90s
+pod "pending" deleted from s14 namespace
+pod/pending created
+pod/pending condition met
+
+# AFTER
+$ kubectl get pod pending -n s14 -o wide
+NAME      READY   STATUS    RESTARTS   AGE   IP             NODE         NOMINATED NODE   READINESS GATES
+pending   1/1     Running   0          1s    10.244.0.146   devops-lab   <none>           <none>
+

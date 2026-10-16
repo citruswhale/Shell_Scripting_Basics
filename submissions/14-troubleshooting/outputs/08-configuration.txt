@@ -1,0 +1,32 @@
+# BEFORE
+$ kubectl apply -f issues/08-configuration/broken.yaml
+configmap/loan-settings created
+pod/config-app created
+
+# INVESTIGATE
+$ kubectl get pod config-app -n s14
+NAME         READY   STATUS                       RESTARTS   AGE
+config-app   0/1     CreateContainerConfigError   0          9s
+
+$ kubectl describe pod config-app -n s14 | sed -n "/Events:/,\$p" | tail -2
+  Normal   Pulled     8s (x2 over 8s)  kubelet            spec.containers{app}: Container image "busybox:1.36" already present on machine and can be accessed by the pod
+  Warning  Failed     8s (x2 over 8s)  kubelet            spec.containers{app}: Error: couldn't find key MAX_LOAN_DAYS in ConfigMap s14/loan-settings
+
+$ kubectl get configmap loan-settings -n s14 -o jsonpath="{.data}"; echo
+{"max_loan_days":"14"}
+
+# FIX
+$ kubectl delete pod config-app -n s14 && kubectl apply -f issues/08-configuration/fixed.yaml && kubectl wait -n s14 --for=condition=Ready pod/config-app --timeout=60s
+pod "config-app" deleted from s14 namespace
+configmap/loan-settings unchanged
+pod/config-app created
+pod/config-app condition met
+
+# AFTER
+$ kubectl get pod config-app -n s14
+NAME         READY   STATUS    RESTARTS   AGE
+config-app   1/1     Running   0          0s
+
+$ kubectl logs config-app -n s14
+MAX_LOAN_DAYS=14
+

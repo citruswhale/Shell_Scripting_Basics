@@ -1,0 +1,160 @@
+$ kubectl apply -f 00-app/app.yaml && kubectl rollout status deploy/gear-web -n s14 --timeout=120s
+namespace/s14 created
+deployment.apps/gear-web created
+service/gear-web created
+Waiting for deployment "gear-web" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "gear-web" rollout to finish: 1 of 2 updated replicas are available...
+deployment "gear-web" successfully rolled out
+
+$ kubectl get pods -n s14
+NAME                        READY   STATUS    RESTARTS   AGE
+gear-web-6645695bc6-jdrcj   1/1     Running   0          1s
+gear-web-6645695bc6-psz9r   1/1     Running   0          1s
+
+$ kubectl get pods -n s14 -o wide
+NAME                        READY   STATUS    RESTARTS   AGE   IP             NODE         NOMINATED NODE   READINESS GATES
+gear-web-6645695bc6-jdrcj   1/1     Running   0          1s    10.244.0.141   devops-lab   <none>           <none>
+gear-web-6645695bc6-psz9r   1/1     Running   0          1s    10.244.0.140   devops-lab   <none>           <none>
+
+$ kubectl get deploy,rs,svc,endpointslices -n s14
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gear-web   2/2     2            2           1s
+
+NAME                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/gear-web-6645695bc6   2         2         2       1s
+
+NAME               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/gear-web   ClusterIP   10.100.132.17   <none>        80/TCP    1s
+
+NAME                                            ADDRESSTYPE   PORTS   ENDPOINTS                   AGE
+endpointslice.discovery.k8s.io/gear-web-pd7rw   IPv4          80      10.244.0.140,10.244.0.141   1s
+
+$ kubectl get pods -n s14 --show-labels
+NAME                        READY   STATUS    RESTARTS   AGE   LABELS
+gear-web-6645695bc6-jdrcj   1/1     Running   0          1s    app=gear-web,pod-template-hash=6645695bc6
+gear-web-6645695bc6-psz9r   1/1     Running   0          1s    app=gear-web,pod-template-hash=6645695bc6
+
+$ kubectl get pod -n s14 -l app=gear-web -o jsonpath="{range .items[*]}{.metadata.name}{\"  \"}{.status.podIP}{\"  \"}{.spec.nodeName}{\"
+\"}{end}"
+gear-web-6645695bc6-jdrcj  10.244.0.141  devops-lab
+gear-web-6645695bc6-psz9r  10.244.0.140  devops-lab
+
+$ kubectl describe deploy gear-web -n s14 | sed -n "1,12p;/Events:/,\$p"
+Name:                   gear-web
+Namespace:              s14
+CreationTimestamp:      Fri, 16 Oct 2026 21:13:15 +0200
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=gear-web
+Replicas:               2 desired | 2 updated | 2 total | 2 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=gear-web
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  1s    deployment-controller  Scaled up replica set gear-web-6645695bc6 from 0 to 2
+
+$ P=$(kubectl get pod -n s14 -l app=gear-web -o name | head -1); kubectl describe $P -n s14 | sed -n "/Conditions:/,\$p"
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-9vpqr:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  1s    default-scheduler  Successfully assigned s14/gear-web-6645695bc6-jdrcj to devops-lab
+  Normal  Pulled     0s    kubelet            spec.containers{web}: Container image "nginx:1.27-alpine" already present on machine and can be accessed by the pod
+  Normal  Created    0s    kubelet            spec.containers{web}: Container created
+  Normal  Started    0s    kubelet            spec.containers{web}: Container started
+
+$ P=$(kubectl get pod -n s14 -l app=gear-web -o name | head -1); kubectl exec -n s14 $P -- sh -c "wget -qO- localhost | grep -o \"<title>.*</title>\"; cat /etc/resolv.conf | head -1"; kubectl logs -n s14 $P --tail=2
+<title>Welcome to nginx!</title>
+search s14.svc.cluster.local svc.cluster.local cluster.local
+2026/10/16 19:13:16 [notice] 1#1: start worker process 39
+::1 - - [16/Oct/2026:19:13:16 +0000] "GET / HTTP/1.1" 200 615 "-" "Wget" "-"
+
+$ kubectl logs -n s14 -l app=gear-web --tail=1 --prefix
+[pod/gear-web-6645695bc6-jdrcj/web] ::1 - - [16/Oct/2026:19:13:16 +0000] "GET / HTTP/1.1" 200 615 "-" "Wget" "-"
+[pod/gear-web-6645695bc6-psz9r/web] 2026/10/16 19:13:16 [notice] 1#1: start worker process 39
+
+$ kubectl events -n s14 --types=Normal | tail -6
+0s          Normal   Pulled              Pod/gear-web-6645695bc6-jdrcj    Container image "nginx:1.27-alpine" already present on machine and can be accessed by the pod
+0s          Normal   Created             Pod/gear-web-6645695bc6-jdrcj    Container created
+0s          Normal   Started             Pod/gear-web-6645695bc6-jdrcj    Container started
+0s          Normal   Pulled              Pod/gear-web-6645695bc6-psz9r    Container image "nginx:1.27-alpine" already present on machine and can be accessed by the pod
+0s          Normal   Created             Pod/gear-web-6645695bc6-psz9r    Container created
+0s          Normal   Started             Pod/gear-web-6645695bc6-psz9r    Container started
+
+$ kubectl explain pod.spec.containers.resources | head -20
+KIND:       Pod
+VERSION:    v1
+
+FIELD: resources <ResourceRequirements>
+
+
+DESCRIPTION:
+    Compute Resources required by this container. Cannot be updated. More info:
+    https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+    ResourceRequirements describes the compute resource requirements.
+    
+FIELDS:
+  claims	<[]ResourceClaim>
+    Claims lists the names of resources, defined in spec.resourceClaims, that
+    are used by this container.
+    
+    This field depends on the DynamicResourceAllocation feature gate.
+    
+    This field is immutable. It can only be set for containers.
+
+
+$ kubectl explain deployment.spec.strategy.rollingUpdate.maxUnavailable
+GROUP:      apps
+KIND:       Deployment
+VERSION:    v1
+
+FIELD: maxUnavailable <IntOrString>
+
+
+DESCRIPTION:
+    The maximum number of pods that can be unavailable during the update. Value
+    can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).
+    Absolute number is calculated from percentage by rounding down. This can not
+    be 0 if MaxSurge is 0. Defaults to 25%. Example: when this is set to 30%,
+    the old ReplicaSet can be scaled down to 70% of desired pods immediately
+    when the rolling update starts. Once new pods are ready, old ReplicaSet can
+    be scaled down further, followed by scaling up the new ReplicaSet, ensuring
+    that the total number of pods available at all times during the update is at
+    least 70% of desired pods.
+    IntOrString is a type that can hold an int32 or a string.  When used in JSON
+    or YAML marshalling and unmarshalling, it produces or consumes the inner
+    type.  This allows you to have, for example, a JSON field that can accept a
+    name or number.
+    
+
+
+$ kubectl top nodes; kubectl top pods -n s14
+NAME         CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+devops-lab   147m         1%       1145Mi          9%          
+error: metrics not available yet
+
+$ kubectl get nodes -o wide
+NAME         STATUS   ROLES           AGE   VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION            CONTAINER-RUNTIME
+devops-lab   Ready    control-plane   93m   v1.37.0   192.168.49.2   <none>        Debian GNU/Linux 12 (bookworm)   7.0.14-linuxkit (arm64)   containerd://2.3.4
+

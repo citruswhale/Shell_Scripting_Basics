@@ -1,0 +1,40 @@
+# BEFORE
+$ kubectl apply -f issues/06-dns/broken.yaml
+pod/dns-client created
+
+# INVESTIGATE
+$ kubectl logs dns-client -n s14
+
+HTTP 000
+curl failed with exit 6
+
+$ kubectl exec -n s14 client -- nslookup gear-web.default.svc.cluster.local || true
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+** server can't find gear-web.default.svc.cluster.local: NXDOMAIN
+
+command terminated with exit code 1
+
+$ kubectl get svc -A | grep -E "NAMESPACE|gear-web "
+NAMESPACE           NAME                                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+s14                 gear-web                             ClusterIP   10.100.132.17   <none>        80/TCP                       3m50s
+
+$ kubectl exec -n s14 client -- nslookup gear-web.s14.svc.cluster.local
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	gear-web.s14.svc.cluster.local
+Address: 10.100.132.17
+
+
+# FIX
+$ kubectl delete pod dns-client -n s14 && kubectl apply -f issues/06-dns/fixed.yaml && kubectl wait -n s14 --for=jsonpath="{.status.phase}"=Succeeded pod/dns-client --timeout=60s
+pod "dns-client" deleted from s14 namespace
+pod/dns-client created
+pod/dns-client condition met
+
+# AFTER
+$ kubectl logs dns-client -n s14
+HTTP 200
+

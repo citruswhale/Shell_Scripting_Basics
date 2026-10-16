@@ -1,0 +1,90 @@
+# 1. Deploy the application
+$ kubectl apply -n s14-mp -f deployment.yaml -f service.yaml && kubectl rollout status deploy/troubleshooting-app -n s14-mp --timeout=120s
+deployment.apps/troubleshooting-app created
+service/troubleshooting-service created
+Waiting for deployment "troubleshooting-app" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "troubleshooting-app" rollout to finish: 1 of 2 updated replicas are available...
+deployment "troubleshooting-app" successfully rolled out
+
+$ kubectl get pods,svc -n s14-mp -o wide
+NAME                                       READY   STATUS    RESTARTS   AGE   IP             NODE         NOMINATED NODE   READINESS GATES
+pod/troubleshooting-app-59d4957864-mq42f   1/1     Running   0          0s    10.244.0.176   devops-lab   <none>           <none>
+pod/troubleshooting-app-59d4957864-znp7c   1/1     Running   0          0s    10.244.0.177   devops-lab   <none>           <none>
+
+NAME                              TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE   SELECTOR
+service/troubleshooting-service   ClusterIP   10.105.42.33   <none>        80/TCP    0s    app=troubleshooting-app
+
+# 2. Check the application
+$ P=$(kubectl get pod -n s14-mp -l app=troubleshooting-app -o name | head -1); kubectl exec -n s14-mp $P -- curl -s localhost | grep -o '<title>.*</title>'
+<title>Welcome to nginx!</title>
+
+# 3-4. Check the Service and endpoints
+$ kubectl describe svc troubleshooting-service -n s14-mp | grep -E 'Selector|TargetPort|Endpoints'
+Selector:                 app=troubleshooting-app
+TargetPort:               80/TCP
+Endpoints:                10.244.0.176:80,10.244.0.177:80
+
+$ kubectl get endpoints troubleshooting-service -n s14-mp 2>/dev/null
+NAME                      ENDPOINTS                         AGE
+troubleshooting-service   10.244.0.176:80,10.244.0.177:80   0s
+
+# 5-6. Broken Pod
+$ kubectl apply -n s14-mp -f broken-pod.yaml; sleep 15; kubectl get pod project-broken-pod -n s14-mp
+pod/project-broken-pod created
+NAME                 READY   STATUS         RESTARTS   AGE
+project-broken-pod   0/1     ErrImagePull   0          15s
+
+$ kubectl describe pod project-broken-pod -n s14-mp | sed -n '/Events:/,$p'
+Events:
+  Type     Reason     Age   From               Message
+  ----     ------     ----  ----               -------
+  Normal   Scheduled  16s   default-scheduler  Successfully assigned s14-mp/project-broken-pod to devops-lab
+  Normal   Pulling    15s   kubelet            spec.containers{app}: Pulling image "nginx:this-tag-does-not-exist"
+  Warning  Failed     14s   kubelet            spec.containers{app}: Failed to pull image "nginx:this-tag-does-not-exist": rpc error: code = NotFound desc = failed to pull and unpack image "docker.io/library/nginx:this-tag-does-not-exist": failed to resolve reference "docker.io/library/nginx:this-tag-does-not-exist": docker.io/library/nginx:this-tag-does-not-exist: not found
+  Warning  Failed     14s   kubelet            spec.containers{app}: Error: ErrImagePull
+  Normal   BackOff    14s   kubelet            spec.containers{app}: Back-off pulling image "nginx:this-tag-does-not-exist"
+  Warning  Failed     14s   kubelet            spec.containers{app}: Error: ImagePullBackOff
+
+$ kubectl delete pod project-broken-pod -n s14-mp && sed 's/nginx:this-tag-does-not-exist/nginx:1.27/' broken-pod.yaml | kubectl apply -n s14-mp -f - && kubectl wait -n s14-mp --for=condition=Ready pod/project-broken-pod --timeout=90s && kubectl get pod project-broken-pod -n s14-mp
+pod "project-broken-pod" deleted from s14-mp namespace
+pod/project-broken-pod created
+pod/project-broken-pod condition met
+NAME                 READY   STATUS    RESTARTS   AGE
+project-broken-pod   1/1     Running   0          1s
+
+# 8-9. Service selector problem
+$ kubectl apply -n s14-mp -f service-broken-selector.yaml && sleep 3 && kubectl get endpoints troubleshooting-service -n s14-mp 2>/dev/null
+service/troubleshooting-service configured
+NAME                      ENDPOINTS   AGE
+troubleshooting-service   <none>      20s
+
+$ kubectl run t -n s14-mp --image=curlimages/curl:8.11.1 --rm -i --restart=Never --quiet -- curl -s -m 4 -o /dev/null -w 'HTTP %{http_code}
+' http://troubleshooting-service </dev/null 2>/dev/null | head -1; true
+HTTP 000
+
+$ kubectl get pods -n s14-mp --show-labels
+NAME                                   READY   STATUS    RESTARTS   AGE   LABELS
+project-broken-pod                     1/1     Running   0          5s    <none>
+t                                      1/1     Running   0          1s    run=t
+troubleshooting-app-59d4957864-mq42f   1/1     Running   0          21s   app=troubleshooting-app,pod-template-hash=59d4957864
+troubleshooting-app-59d4957864-znp7c   1/1     Running   0          21s   app=troubleshooting-app,pod-template-hash=59d4957864
+
+$ kubectl describe svc troubleshooting-service -n s14-mp | grep -E 'Selector|Endpoints'
+Selector:                 app=wrong-app
+Endpoints:                
+
+$ kubectl apply -n s14-mp -f service.yaml && sleep 4 && kubectl get endpoints troubleshooting-service -n s14-mp 2>/dev/null
+service/troubleshooting-service configured
+NAME                      ENDPOINTS                         AGE
+troubleshooting-service   10.244.0.176:80,10.244.0.177:80   25s
+
+# verify after the fix (fresh test client Pod)
+$ kubectl exec -n s14-mp client -- curl -s -m 4 -o /dev/null -w "HTTP %{http_code}
+" http://troubleshooting-service
+HTTP 200
+
+$ kubectl exec -n s14-mp client -- nslookup troubleshooting-service.s14-mp.svc.cluster.local | tail -3
+Name:	troubleshooting-service.s14-mp.svc.cluster.local
+Address: 10.99.39.151
+
+
