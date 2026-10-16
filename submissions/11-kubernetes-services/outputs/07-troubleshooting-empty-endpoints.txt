@@ -1,0 +1,39 @@
+$ kubectl apply -f troubleshooting-empty-endpoints.yaml; sleep 3; kubectl get svc web-broken -n s11
+service/web-broken created
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+web-broken   ClusterIP   10.109.194.174   <none>        80/TCP    3s
+
+$ kubectl exec -n s11 client -- curl -s --max-time 3 web-broken || echo "FAILED exit=$?"
+command terminated with exit code 7
+FAILED exit=7
+
+$ kubectl get endpointslices -n s11 -l kubernetes.io/service-name=web-broken
+NAME               ADDRESSTYPE   PORTS     ENDPOINTS   AGE
+web-broken-c47zh   IPv4          <unset>   <unset>     3s
+
+$ kubectl describe svc web-broken -n s11 | grep -E "Selector|Endpoints"
+Selector:                 app=webapp
+Endpoints:                
+
+$ kubectl get pods -n s11 --show-labels | grep -E "NAME|web-"
+NAME                   READY   STATUS    RESTARTS   AGE     LABELS
+web-658885c57f-4hv8d   1/1     Running   0          3m26s   app=web,pod-template-hash=658885c57f
+web-658885c57f-r6xc5   1/1     Running   0          3m26s   app=web,pod-template-hash=658885c57f
+web-658885c57f-xf56z   1/1     Running   0          3m26s   app=web,pod-template-hash=658885c57f
+
+$ kubectl get pods -n s11 -l app=webapp; kubectl get pods -n s11 -l app=web --no-headers | wc -l
+No resources found in s11 namespace.
+       3
+
+# Root cause: the Service selects app=webapp but the Pods have app=web. Fix: change the selector to app=web.
+$ kubectl patch svc web-broken -n s11 -p "{\"spec\":{\"selector\":{\"app\":\"web\"}}}"; sleep 4; kubectl get endpointslices -n s11 -l kubernetes.io/service-name=web-broken
+service/web-broken patched
+NAME               ADDRESSTYPE   PORTS   ENDPOINTS                             AGE
+web-broken-c47zh   IPv4          8080    10.244.0.74,10.244.0.75,10.244.0.73   8s
+
+$ kubectl exec -n s11 client -- sh -c "for i in 1 2 3; do curl -s --max-time 3 -w \" %{http_code}
+\" web-broken; done"
+web-658885c57f-xf56z 200
+web-658885c57f-xf56z 200
+web-658885c57f-r6xc5 200
+

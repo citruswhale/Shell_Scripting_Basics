@@ -1,0 +1,12 @@
+# broken on purpose: the selector does not match any Pod label
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-broken
+  namespace: s11
+spec:
+  selector:
+    app: webapp            # the Pods are labelled app: web
+  ports:
+    - port: 80
+      targetPort: http

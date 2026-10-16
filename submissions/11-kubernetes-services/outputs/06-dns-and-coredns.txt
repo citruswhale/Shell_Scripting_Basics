@@ -1,0 +1,88 @@
+$ kubectl exec -n s11 client -- cat /etc/resolv.conf
+search s11.svc.cluster.local svc.cluster.local cluster.local
+nameserver 10.96.0.10
+options ndots:5
+
+$ kubectl get svc kube-dns -n kube-system; kubectl get pods -n kube-system -l k8s-app=kube-dns -o wide
+NAME       TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)                  AGE
+kube-dns   ClusterIP   10.96.0.10   <none>        53/UDP,53/TCP,9153/TCP   34m
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE         NOMINATED NODE   READINESS GATES
+coredns-559f6c778d-qhjsr   1/1     Running   0          34m   10.244.0.2   devops-lab   <none>           <none>
+
+$ kubectl get configmap coredns -n kube-system -o jsonpath="{.data.Corefile}"
+.:53 {
+    log
+    errors
+    health {
+       lameduck 5s
+    }
+    ready
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+       pods insecure
+       fallthrough in-addr.arpa ip6.arpa
+       ttl 30
+    }
+    prometheus :9153
+    hosts {
+       192.168.65.254 host.minikube.internal
+       fallthrough
+    }
+    forward . /etc/resolv.conf {
+       max_concurrent 1000
+    }
+    cache 30 {
+       disable success cluster.local
+       disable denial cluster.local
+    }
+    loop
+    reload
+    loadbalance
+}
+
+$ kubectl exec -n s11 client -- nslookup web-clusterip
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	web-clusterip.s11.svc.cluster.local
+Address: 10.102.106.60
+
+
+$ kubectl exec -n s11 client -- nslookup kubernetes.default
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	kubernetes.default.svc.cluster.local
+Address: 10.96.0.1
+
+
+$ kubectl exec -n s11 client -- nslookup kube-dns.kube-system.svc.cluster.local
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	kube-dns.kube-system.svc.cluster.local
+Address: 10.96.0.10
+
+
+$ POD_IP=$(kubectl get pod client -n s11 -o jsonpath={.status.podIP}); D=$(echo $POD_IP | tr . -); kubectl exec -n s11 client -- nslookup $D.s11.pod.cluster.local
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	10-244-0-72.s11.pod.cluster.local
+Address: 10.244.0.72
+
+
+$ kubectl exec -n s11 client -- nslookup does-not-exist.s11.svc.cluster.local; true
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+** server can't find does-not-exist.s11.svc.cluster.local: NXDOMAIN
+
+command terminated with exit code 1
+
+$ kubectl logs -n kube-system -l k8s-app=kube-dns --tail=5
+[INFO] 10.244.0.72:56189 - 6066 "AAAA IN 10-244-0-72.s11.pod.cluster.local. udp 51 false 512" NOERROR qr,aa,rd 144 0.000030042s
+[INFO] 10.244.0.72:57327 - 43727 "A IN does-not-exist.s11.svc.cluster.local.s11.svc.cluster.local. udp 76 false 512" NXDOMAIN qr,aa,rd 169 0.000062291s
+[INFO] 10.244.0.72:50204 - 25892 "A IN does-not-exist.s11.svc.cluster.local.svc.cluster.local. udp 72 false 512" NXDOMAIN qr,aa,rd 165 0.00004275s
+[INFO] 10.244.0.72:43758 - 41663 "A IN does-not-exist.s11.svc.cluster.local.cluster.local. udp 68 false 512" NXDOMAIN qr,aa,rd 161 0.000033s
+[INFO] 10.244.0.72:59076 - 40173 "A IN does-not-exist.s11.svc.cluster.local. udp 54 false 512" NXDOMAIN qr,aa,rd 147 0.0000325s
+

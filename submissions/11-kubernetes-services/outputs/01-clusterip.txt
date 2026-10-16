@@ -1,0 +1,28 @@
+$ kubectl apply -f 01-clusterip/service.yaml && kubectl get svc web-clusterip -n s11
+service/web-clusterip created
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+web-clusterip   ClusterIP   10.102.106.60   <none>        80/TCP    1s
+
+$ kubectl get endpointslices -n s11 -l kubernetes.io/service-name=web-clusterip
+NAME                  ADDRESSTYPE   PORTS   ENDPOINTS                             AGE
+web-clusterip-p65gj   IPv4          8080    10.244.0.73,10.244.0.75,10.244.0.74   1s
+
+$ kubectl exec -n s11 client -- sh -c "for i in \$(seq 1 9); do curl -s web-clusterip; echo; done | sort | uniq -c"
+      6 
+      3 web-658885c57f-r6xc5
+
+$ kubectl exec -n s11 client -- sh -c "curl -s http://web-clusterip.s11.svc.cluster.local; echo; curl -s http://\$(nslookup web-clusterip.s11.svc.cluster.local >/dev/null; echo web-clusterip.s11); echo"
+web-658885c57f-4hv8d
+web-658885c57f-4hv8d
+
+$ IP=$(kubectl get svc web-clusterip -n s11 -o jsonpath={.spec.clusterIP}); echo "ClusterIP is $IP. Trying it from my Mac:"; curl -s --max-time 3 http://$IP || echo "-> no answer from the Mac (exit $?): a ClusterIP only works inside the cluster"
+ClusterIP is 10.102.106.60. Trying it from my Mac:
+-> no answer from the Mac (exit 28): a ClusterIP only works inside the cluster
+
+# ---- Retry about 1 minute later. My first test ran less than a second after the Service was created, before kube-proxy had added its rules (6 of 9 requests got nothing). ----
+$ kubectl exec -n s11 client -- sh -c "for i in \$(seq 1 30); do curl -s --max-time 2 -w \" %{http_code}
+\" web-clusterip || echo FAILED; done | sort | uniq -c"
+      6 web-658885c57f-4hv8d 200
+      9 web-658885c57f-r6xc5 200
+     15 web-658885c57f-xf56z 200
+

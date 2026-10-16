@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-lb
+  namespace: s11
+spec:
+  type: LoadBalancer       # asks the cloud (here: minikube tunnel) for an external IP
+  selector:
+    app: web
+  ports:
+    - port: 8081           # above 1024 so minikube tunnel does not need sudo
+      targetPort: http

@@ -1,0 +1,63 @@
+$ kubectl apply -f 05-headless/ && kubectl rollout status sts/db -n s11 --timeout=120s; sleep 5
+service/db-headless created
+statefulset.apps/db created
+Waiting for 3 pods to be ready...
+Waiting for 2 pods to be ready...
+Waiting for 2 pods to be ready...
+Waiting for 1 pods to be ready...
+Waiting for 1 pods to be ready...
+partitioned roll out complete: 3 new pods have been updated...
+
+$ kubectl get svc db-headless -n s11; kubectl get pods -n s11 -l app=db -o wide
+NAME          TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
+db-headless   ClusterIP   None         <none>        8080/TCP   6s
+NAME   READY   STATUS    RESTARTS   AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+db-0   1/1     Running   0          6s    10.244.0.76   devops-lab   <none>           <none>
+db-1   1/1     Running   0          6s    10.244.0.77   devops-lab   <none>           <none>
+db-2   1/1     Running   0          5s    10.244.0.78   devops-lab   <none>           <none>
+
+$ kubectl exec -n s11 client -- nslookup db-headless.s11.svc.cluster.local
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	db-headless.s11.svc.cluster.local
+Address: 10.244.0.78
+Name:	db-headless.s11.svc.cluster.local
+Address: 10.244.0.77
+Name:	db-headless.s11.svc.cluster.local
+Address: 10.244.0.76
+
+
+$ kubectl exec -n s11 client -- nslookup web-clusterip.s11.svc.cluster.local   # compare: normal Service returns ONE virtual IP
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	web-clusterip.s11.svc.cluster.local
+Address: 10.102.106.60
+
+
+$ kubectl exec -n s11 client -- sh -c "for i in 0 1 2; do curl -s db-\$i.db-headless.s11.svc.cluster.local:8080; echo; done"
+db-0
+db-1
+db-2
+
+$ kubectl exec -n s11 client -- nslookup db-1.db-headless.s11.svc.cluster.local
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	db-1.db-headless.s11.svc.cluster.local
+Address: 10.244.0.77
+
+
+$ kubectl delete pod db-1 -n s11 && kubectl wait -n s11 --for=condition=Ready pod/db-1 --timeout=90s && sleep 3 && kubectl get pod db-1 -n s11 -o wide && kubectl exec -n s11 client -- nslookup db-1.db-headless.s11.svc.cluster.local   # same name, new IP
+pod "db-1" deleted from s11 namespace
+pod/db-1 condition met
+NAME   READY   STATUS    RESTARTS   AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+db-1   1/1     Running   0          3s    10.244.0.79   devops-lab   <none>           <none>
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+Name:	db-1.db-headless.s11.svc.cluster.local
+Address: 10.244.0.79
+
+

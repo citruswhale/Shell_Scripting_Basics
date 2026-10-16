@@ -1,0 +1,29 @@
+# 3 Pods that reply with their own Pod name, so I can see which Pod answered
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: s11
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
+          args: ["serve-hostname", "--port=8080"]
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+            periodSeconds: 2
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 64Mi }

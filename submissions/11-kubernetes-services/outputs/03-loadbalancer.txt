@@ -1,0 +1,52 @@
+$ kubectl apply -f 03-loadbalancer/service.yaml; sleep 10; kubectl get svc web-lb -n s11   # no tunnel running yet
+service/web-lb created
+NAME     TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+web-lb   LoadBalancer   10.101.101.111   <pending>     8081:31034/TCP   10s
+
+$ kubectl describe svc web-lb -n s11 | grep -E "Type|LoadBalancer Ingress|NodePort|Endpoints|Events" 
+Type:                     LoadBalancer
+NodePort:                 <unset>  31034/TCP
+Endpoints:                10.244.0.73:8080,10.244.0.74:8080,10.244.0.75:8080
+Events:                   <none>
+
+$ minikube tunnel -p devops-lab     # started in another terminal
+* Tunnel successfully started
+
+* NOTE: Please do not close this terminal as this process must stay alive for the tunnel to be accessible ...
+
+* Starting tunnel for service web-lb.
+
+$ kubectl get svc web-lb -n s11
+NAME     TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+web-lb   LoadBalancer   10.101.101.111   127.0.0.1     8081:31034/TCP   32s
+
+$ EXT=$(kubectl get svc web-lb -n s11 -o jsonpath="{.status.loadBalancer.ingress[0].ip}"); echo "external IP: $EXT"; for i in $(seq 1 6); do curl -s --max-time 3 -w " %{http_code}
+" http://$EXT:8081 || echo FAILED; done   # from my Mac
+external IP: 127.0.0.1
+web-658885c57f-r6xc5 200
+web-658885c57f-4hv8d 200
+web-658885c57f-4hv8d 200
+web-658885c57f-r6xc5 200
+web-658885c57f-r6xc5 200
+web-658885c57f-4hv8d 200
+
+$ kubectl get svc web-lb -n s11   # after I stopped the tunnel
+NAME     TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+web-lb   LoadBalancer   10.101.101.111   127.0.0.1     8081:31034/TCP   35s
+
+$ curl -s --max-time 3 http://127.0.0.1:8081 || echo "FAILED exit=$? -> the tunnel is gone, so nothing answers even though EXTERNAL-IP still says 127.0.0.1"
+web-658885c57f-4hv8d
+# I expected the curl above to fail. It still worked, so I checked what was listening on port 8081:
+$ lsof -nP -iTCP:8081 -sTCP:LISTEN
+COMMAND   PID              USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+ssh     63135 srinidhinarendran    5u  IPv4 0xa99a5333011aa7bc      0t0  TCP 127.0.0.1:8081 (LISTEN)
+ssh     63135 srinidhinarendran    6u  IPv6 0xc427b0d852641bf3      0t0  TCP [::1]:8081 (LISTEN)
+
+$ ps -o pid,command -p $(lsof -t -nP -iTCP:8081 -sTCP:LISTEN | head -1)
+  PID COMMAND
+63135 ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -N docker@127.0.0.1 -p 50215 -i /Users/srinidhinarendran/.minikube/machines/devops-lab/id_rsa -L 8081:10.101.101.111:8081
+
+# On macOS with the docker driver, minikube tunnel works by starting an ssh port-forward (-L 8081:<ClusterIP>:8081). Killing only the tunnel process left this ssh child behind, so I stopped it too.
+$ kill $(lsof -t -nP -iTCP:8081 -sTCP:LISTEN | head -1); sleep 1; curl -s --max-time 3 http://127.0.0.1:8081 || echo "FAILED exit=$? -> now nothing answers on 8081"
+FAILED exit=7 -> now nothing answers on 8081
+

@@ -1,0 +1,63 @@
+$ kubectl apply -f 02-nodeport/service.yaml && kubectl get svc web-nodeport -n s11
+service/web-nodeport created
+NAME           TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+web-nodeport   NodePort   10.98.169.33   <none>        80:30080/TCP   0s
+
+$ minikube ip -p devops-lab
+192.168.49.2
+
+$ minikube ssh -p devops-lab -- "for i in 1 2 3; do curl -s localhost:30080; echo; done"
+
+
+
+
+$ NODE=$(minikube ip -p devops-lab); kubectl exec -n s11 client -- curl -s http://$NODE:30080; echo
+command terminated with exit code 7
+
+
+$ curl -s --max-time 3 http://$(minikube ip -p devops-lab):30080 || echo "-> no answer from my Mac directly (exit $?). With the docker driver on macOS, the node IP lives inside DocDesktop VM network"
+-> no answer from my Mac directly (exit 28). With the docker driver on macOS, the node IP lives inside DocDesktop VM network
+
+$ timeout 20 minikube service web-nodeport -n s11 -p devops-lab --url > /tmp/np.url 2>&1 & sleep 8; U=$(grep -m1 http /tmp/np.url); echo "minikube service gave me: $U"; for i in 1 2 3; do curl -s --max-time 3 $U; echo; done
+minikube service gave me: 
+curl: (2) no URL specified
+curl: try 'curl --help' or 'curl --manual' for more information
+
+curl: (2) no URL specified
+curl: try 'curl --help' or 'curl --manual' for more information
+
+curl: (2) no URL specified
+curl: try 'curl --help' or 'curl --manual' for more information
+
+
+# ---- Retry about 1 minute later (same reason as ClusterIP: tested too early) ----
+$ minikube ssh -p devops-lab -- "for i in 1 2 3; do curl -s -w \" %{http_code}
+\" localhost:30080; done"
+web-658885c57f-r6xc5 200
+web-658885c57f-r6xc5 200
+web-658885c57f-xf56z 200
+
+$ NODE=$(minikube ip -p devops-lab); kubectl exec -n s11 client -- sh -c "for i in 1 2 3 4 5 6; do curl -s --max-time 2 -w \" %{http_code}
+\" http://$NODE:30080 || echo FAILED; done"
+web-658885c57f-r6xc5 200
+web-658885c57f-r6xc5 200
+web-658885c57f-r6xc5 200
+web-658885c57f-4hv8d 200
+web-658885c57f-xf56z 200
+web-658885c57f-xf56z 200
+
+$ minikube ssh -p devops-lab -- "sudo iptables-save -t nat | grep web-nodeport | head -3"
+-A KUBE-EXT-HSC7BRQC7LFEXT25 -m comment --comment "masquerade traffic for s11/web-nodeport external destinations" -j KUBE-MARK-MASQ
+-A KUBE-NODEPORTS -d 127.0.0.0/8 -p tcp -m comment --comment "s11/web-nodeport" -m tcp --dport 30080 -m nfacct --nfacct-name  localhost_nps_accepted_pkts -j KUBE-EXT-HSC7BRQC7LFEXT25
+-A KUBE-NODEPORTS -p tcp -m comment --comment "s11/web-nodeport" -m tcp --dport 30080 -j KUBE-EXT-HSC7BRQC7LFEXT25
+
+$ minikube service web-nodeport -n s11 -p devops-lab --url     # left running in another terminal
+http://127.0.0.1:51899
+! Because you are using a Docker driver on darwin, the terminal needs to be open to run it.
+
+$ for i in 1 2 3; do curl -s --max-time 3 -w ' %{http_code}
+' http://127.0.0.1:51899; done   # from my Mac, through the minikube service tunnel
+web-658885c57f-xf56z 200
+web-658885c57f-xf56z 200
+web-658885c57f-r6xc5 200
+

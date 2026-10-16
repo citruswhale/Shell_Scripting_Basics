@@ -1,0 +1,18 @@
+$ kubectl apply -f 00-app/namespace.yaml && kubectl apply -f 00-app/ && kubectl rollout status deploy/web -n s11 --timeout=120s && kubectl wait -n s11 --for=condition=Ready pod/client --timeout=120s
+namespace/s11 created
+pod/client created
+namespace/s11 unchanged
+deployment.apps/web created
+Waiting for deployment "web" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "web" rollout to finish: 1 of 3 updated replicas are available...
+Waiting for deployment "web" rollout to finish: 2 of 3 updated replicas are available...
+deployment "web" successfully rolled out
+pod/client condition met
+
+$ kubectl get pods -n s11 -o wide
+NAME                   READY   STATUS    RESTARTS   AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+client                 1/1     Running   0          9s    10.244.0.72   devops-lab   <none>           <none>
+web-658885c57f-4hv8d   1/1     Running   0          9s    10.244.0.75   devops-lab   <none>           <none>
+web-658885c57f-r6xc5   1/1     Running   0          9s    10.244.0.74   devops-lab   <none>           <none>
+web-658885c57f-xf56z   1/1     Running   0          9s    10.244.0.73   devops-lab   <none>           <none>
+

@@ -1,0 +1,11 @@
+# a Pod with curl and nslookup, used to test from inside the cluster
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client
+  namespace: s11
+spec:
+  containers:
+    - name: client
+      image: registry.k8s.io/e2e-test-images/agnhost:2.53
+      args: ["pause"]

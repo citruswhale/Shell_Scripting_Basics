@@ -1,0 +1,24 @@
+$ kubectl apply -f 04-externalname/service.yaml; sleep 3; kubectl get svc example-site -n s11
+service/example-site created
+NAME           TYPE           CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+example-site   ExternalName   <none>       example.com   <none>    3s
+
+$ kubectl exec -n s11 client -- nslookup example-site.s11.svc.cluster.local
+Server:		10.96.0.10
+Address:	10.96.0.10#53
+
+example-site.s11.svc.cluster.local	canonical name = example.com.
+Name:	example.com
+Address: 104.20.23.154
+Name:	example.com
+Address: 172.66.147.243
+
+
+$ kubectl exec -n s11 client -- curl -s --max-time 5 -o /dev/null -w "http code %{http_code} from %{remote_ip}
+" -H "Host: example.com" http://example-site
+http code 200 from 172.66.147.243
+
+$ kubectl get endpointslices -n s11 -l kubernetes.io/service-name=example-site; echo "(no EndpointSlice: ExternalName has no selector and no Pods)"
+No resources found in s11 namespace.
+(no EndpointSlice: ExternalName has no selector and no Pods)
+

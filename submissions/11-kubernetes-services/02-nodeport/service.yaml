@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-nodeport
+  namespace: s11
+spec:
+  type: NodePort           # opens the same port on every node
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: http
+      nodePort: 30080      # must be in 30000-32767
