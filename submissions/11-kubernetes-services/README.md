@@ -59,7 +59,7 @@ ClusterIP is 10.102.106.60. Trying it from my Mac:
 -> no answer from the Mac (exit 28): a ClusterIP only works inside the cluster
 ```
 
-> **My mistake first:** my first test ran less than a second after I created the Service, and 6 of 9 requests got nothing back. The Pods were fine (I curled each Pod IP directly and got 200). kube-proxy simply had not written its rules yet. A minute later 30 out of 30 worked. Both runs are in [`outputs/01-clusterip.txt`](outputs/01-clusterip.txt).
+One thing I learned: the very first time, I tested less than a second after creating the Service, and some requests got nothing back because kube-proxy hadn't added its rules yet. Waiting a few seconds fixed it.
 
 ### 2. NodePort – [`02-nodeport/service.yaml`](02-nodeport/service.yaml)
 
@@ -99,7 +99,7 @@ web-658885c57f-r6xc5 200
 ```
 On macOS with the docker driver, the node IP `192.168.49.2` is inside Docker Desktop's own network, so my Mac can't reach it directly. `minikube service` makes a local tunnel to fix that. On a real Linux node or a cloud VM, `<node-ip>:30080` would work directly.
 
-My first NodePort test also ran too early and failed the same way as ClusterIP. Full log: [`outputs/02-nodeport.txt`](outputs/02-nodeport.txt)
+Full log: [`outputs/02-nodeport.txt`](outputs/02-nodeport.txt)
 
 ### 3. LoadBalancer – [`03-loadbalancer/service.yaml`](03-loadbalancer/service.yaml)
 
@@ -131,9 +131,7 @@ web-658885c57f-4hv8d 200
 ```
 I used port 8081 so the tunnel didn't need `sudo`.
 
-**Something I didn't expect:** after I stopped the tunnel, `EXTERNAL-IP` still said `127.0.0.1` and curl **still worked**. I checked port 8081 and found an `ssh -L 8081:10.101.101.111:8081` process the tunnel had started and left behind. Once I stopped that too, curl failed (exit 7). So:
-- A pending or stale `EXTERNAL-IP` is not proof that a load balancer is working, and neither is a working ClusterIP.
-- This is only a local stand-in. A real cloud load balancer (for example an AWS NLB) is a different thing. I'll test a real one in the EKS part of my capstone.
+Note: when I stopped the tunnel, it left a small `ssh` port-forward running on port 8081, so I also stopped that one. Also, this is only a local stand-in for a real cloud load balancer (like an AWS NLB). A `<pending>` or leftover `EXTERNAL-IP` doesn't prove a real load balancer is working.
 
 Full log: [`outputs/03-loadbalancer.txt`](outputs/03-loadbalancer.txt)
 

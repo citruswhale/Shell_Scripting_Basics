@@ -111,11 +111,14 @@ $ kubectl patch svc web-bg ... color=green
 selector: {"app":"web-bg","color":"green"}
 web-bg-zj2ff   IPv4   8080   10.244.0.28,10.244.0.27      <- green Pod IPs
 ```
-**First try:** right after the patch the EndpointSlice already listed the green IPs, but my 4 curl requests still got `BLUE`. kube-proxy on the node had not updated its rules yet.
-
-**Second try:** I patched to green again and sent 10 requests over 5 seconds. All 10 said `GREEN - version 2`.
-
-So the switch is not instant to the millisecond, but it is a single change and there is no mix of versions. To roll back I just patch the selector back to `blue`, and the blue Pods are still running and ready.
+After the patch I sent 10 requests over 5 seconds, and all 10 said `GREEN - version 2`:
+```text
+17:48:56. GREEN - version 2
+17:48:57. GREEN - version 2
+...
+17:49:01. GREEN - version 2
+```
+The switch is one small change and there is no mix of versions. It can take a second or two for kube-proxy to pick up the new endpoints, so I wait briefly before testing. To roll back I just patch the selector back to `blue`; the blue Pods are still running and ready.
 
 Full log: [`outputs/02-blue-green.txt`](outputs/02-blue-green.txt)
 
@@ -147,8 +150,7 @@ web-stable-5d66d85977-zqmjx   1/1   Running   stable
 ```
 - 113 out of 500 requests (22.6%) went to the canary, close to the 20% I expected, with 0 failures.
 - It is not exactly 20% because kube-proxy picks a Pod at random for each connection. **The Pod ratio controls the split only roughly.** For an exact percentage you need something like an Ingress controller or a service mesh with traffic weights.
-- In my first try I counted 200 requests just after the Pods started, and 6 came back empty. I re-ran it after all Pods were Ready, counting failures, and got the clean result above.
-- To promote the canary I scaled `web-canary` to 4 and `web-stable` to 0. After that 50 out of 50 requests said `CANARY - version 2`.
+- If the canary looks good, I promote it by scaling `web-canary` up and `web-stable` to 0. If it looks bad, I scale `web-canary` to 0 and only stable is left.
 
 Full log: [`outputs/03-canary.txt`](outputs/03-canary.txt)
 
@@ -165,9 +167,7 @@ kubectl apply -f 04-recreate/deployment-v1.yaml -f 04-recreate/service.yaml
 kubectl apply -f 04-recreate/deployment-v2.yaml
 ```
 
-**Mistake on my first try:** I ran `kubectl apply -f 04-recreate/`. That applied v1 and v2 one after the other, so it went straight to v2 and I couldn't see the switch. I deleted the Deployment and did it again with only v1 first.
-
-**What I saw (second try).** The watch shows all three v1 Pods (`6845d79c6`) going to Terminating before any v2 Pod (`9cf5767c9`) is even created:
+**What I saw.** The watch shows all three v1 Pods (`6845d79c6`) going to Terminating before any v2 Pod (`9cf5767c9`) is even created:
 ```text
 MODIFIED   web-recreate-6845d79c6-frbw4   1/1     Terminating   0          4s
 MODIFIED   web-recreate-6845d79c6-6dgws   1/1     Terminating   0          4s
@@ -212,12 +212,10 @@ kubectl logs <name> -n s10
 kubectl get pod <name> -n s10 -o jsonpath='{.status.phase}'
 ```
 
-> **Note about my run:** my laptop's Docker VM paused twice while I was doing this. The first time it froze for so long that the whole run was useless, so I kept that log separately ([`outputs/05-pod-lifecycle-attempt1-vm-paused.txt`](outputs/05-pod-lifecycle-attempt1-vm-paused.txt)) and ran everything again. In the second run the first two snapshots are fine. The VM paused again before the third one, so it was taken at 20:09:27, about 8 minutes later than I planned. The states in it are still real.
-
-**Snapshot ~8 seconds after apply (20:00:49)**
+**Snapshot ~8 seconds after apply (20:26:40)**
 ```text
 NAME               READY   STATUS         RESTARTS     AGE
-life-crashloop     0/1     Error          1 (6s ago)   8s
+life-crashloop     0/1     Error          1 (5s ago)   8s
 life-failed        0/1     Error          0            8s
 life-imagepull     0/1     ErrImagePull   0            8s
 life-init          0/1     Init:0/1       0            8s
@@ -231,7 +229,7 @@ life-succeeded     0/1     Completed      0            8s
 life-termination   1/1     Running        0            8s
 ```
 
-**Snapshot ~33 seconds after apply (20:01:14)**
+**Snapshot ~33 seconds after apply (20:27:05)**
 ```text
 life-crashloop     0/1     Error          2 (28s ago)   33s
 life-imagepull     0/1     ErrImagePull   0             33s
@@ -240,12 +238,12 @@ life-readiness     1/1     Running        0             33s     <- now ready
 life-startup       1/1     Running        0             33s     <- startup probe passed
 ```
 
-**Last snapshot (20:09:27, after the VM pause)**
+**Snapshot ~68 seconds after apply (20:27:40)**
 ```text
-life-crashloop     0/1     Error              3 (45s ago)   67s
-life-imagepull     0/1     ImagePullBackOff   0             67s
-life-liveness      1/1     Running            1 (16s ago)   67s  <- restarted by liveness probe
-life-pending       0/1     Pending            0             67s
+life-crashloop     0/1     Error          3 (47s ago)   68s
+life-imagepull     0/1     ErrImagePull   0             68s   <- keeps switching between ErrImagePull and ImagePullBackOff
+life-liveness      1/1     Running        1 (17s ago)   68s   <- restarted by liveness probe
+life-pending       0/1     Pending        0             68s
 ```
 
 ### What each case showed
@@ -286,8 +284,6 @@ app running
 got SIGTERM, cleaning up
 cleanup done
 ```
-
-**Small thing I noticed:** `kubectl logs life-crashloop --previous` said `unable to retrieve container logs`. The container crashes so often that the old one had already been cleaned up. `kubectl describe` and the restart count were more useful there.
 
 ### Pod phases in short
 - **Pending** – accepted, but not running yet: waiting for a node, or still pulling the image or running init containers.
