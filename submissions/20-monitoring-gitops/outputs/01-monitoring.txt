@@ -1,0 +1,102 @@
+$ helm list -n monitoring; kubectl get pods -n monitoring
+NAME                 	NAMESPACE 	REVISION	UPDATED                              	STATUS  	CHART                        	APP VERSION
+kube-prometheus-stack	monitoring	3       	2026-10-16 22:24:56.694588 +0200 CEST	deployed	kube-prometheus-stack-92.10.1	v0.94.1    
+NAME                                                        READY   STATUS    RESTARTS   AGE
+alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   0          43m
+kube-prometheus-stack-grafana-67bdc759d6-7txtn              3/3     Running   0          101s
+kube-prometheus-stack-kube-state-metrics-5cb6764748-jfgth   1/1     Running   0          44m
+kube-prometheus-stack-operator-54dff5569f-ntmxn             1/1     Running   0          44m
+kube-prometheus-stack-prometheus-node-exporter-dplc6        1/1     Running   0          44m
+prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0          43m
+
+$ kubectl get servicemonitor -n gearloan; kubectl get prometheusrule -n monitoring gearloan-alerts
+NAME               AGE
+gearloan-backend   42m
+NAME              AGE
+gearloan-alerts   42m
+
+$ curl -s localhost:8000/metrics | grep -E "^(http_requests_total|gearloan_)" | head -12
+http_requests_total{method="GET",path="/health",status="200"} 208.0
+http_requests_total{method="GET",path="/ready",status="200"} 310.0
+http_requests_total{method="GET",path="/api/info",status="200"} 1.0
+http_requests_total{method="GET",path="/api/items",status="200"} 1828.0
+http_requests_total{method="GET",path="/metrics",status="200"} 84.0
+http_requests_total{method="POST",path="/api/items",status="201"} 917.0
+http_requests_total{method="GET",path="/api/stats",status="200"} 936.0
+http_requests_total{method="POST",path="/api/loans",status="201"} 956.0
+http_requests_total{method="POST",path="/api/loans/{loan_id}/return",status="200"} 918.0
+http_requests_total{method="GET",path="/api/loans",status="200"} 930.0
+http_requests_total{method="GET",path="/api/items/{item_id}",status="404"} 2668.0
+gearloan_loans_created_total 956.0
+
+$ curl -s localhost:8000/health; echo; curl -s localhost:8000/ready; echo
+{"status":"ok"}
+{"status":"ready"}
+
+$ curl -s "localhost:9090/api/v1/targets?state=active" | jq -r ".data.activeTargets[] | select(.labels.job==\"gearloan-backend\") | \"\(.labels.pod)  health=\(.health)  \(.scrapeUrl)\""
+gearloan-backend-6698f6c5d-5jmlx  health=up  http://10.244.0.229:8000/metrics
+gearloan-backend-6698f6c5d-xj845  health=up  http://10.244.0.230:8000/metrics
+
+$ curl -s --data-urlencode 'query=sum by (status) (rate(http_requests_total{job="gearloan-backend"}[2m]))' localhost:9090/api/v1/query | jq -r '.data.result[] | "\(.metric | del(.__name__) | to_entries | map(.value) | join(","))  =  \(.value[1])"'   # PromQL: sum by (status) (rate(http_requests_total{job="gearloan-backend"}[2m]))
+200  =  4.166645556818911
+201  =  1.4444349387338746
+404  =  2.2222135808916232
+
+$ curl -s --data-urlencode 'query=histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="gearloan-backend"}[5m])))' localhost:9090/api/v1/query | jq -r '.data.result[] | "\(.metric | del(.__name__) | to_entries | map(.value) | join(","))  =  \(.value[1])"'   # PromQL: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="gearloan-backend"}[5m])))
+  =  0.008977940974968016
+
+$ curl -s --data-urlencode 'query=sum(increase(gearloan_loans_created_total{job="gearloan-backend"}[10m]))' localhost:9090/api/v1/query | jq -r '.data.result[] | "\(.metric | del(.__name__) | to_entries | map(.value) | join(","))  =  \(.value[1])"'   # PromQL: sum(increase(gearloan_loans_created_total{job="gearloan-backend"}[10m]))
+  =  440.0003250263628
+
+$ curl -s --data-urlencode 'query=sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="gearloan",container!=""}[2m]))' localhost:9090/api/v1/query | jq -r '.data.result[] | "\(.metric | del(.__name__) | to_entries | map(.value) | join(","))  =  \(.value[1])"'   # PromQL: sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="gearloan",container!=""}[2m]))
+gearloan-backend-6698f6c5d-xj845  =  0.011732227139997432
+gearloan-backend-6698f6c5d-5jmlx  =  0.01133424369566904
+gearloan-frontend-6b9fd65d88-k8nft  =  0.00008044987259467557
+gearloan-frontend-6b9fd65d88-4x56f  =  0.00004246639566287238
+gearloan-postgres-0  =  0.010565124245072272
+traffic-generator-5bcbd59994-knzsx  =  0.031047986364743187
+
+$ curl -s --data-urlencode 'query=sum by (pod) (container_memory_working_set_bytes{namespace="gearloan",container!=""}) / 1024 / 1024' localhost:9090/api/v1/query | jq -r '.data.result[] | "\(.metric | del(.__name__) | to_entries | map(.value) | join(","))  =  \(.value[1])"'   # PromQL: sum by (pod) (container_memory_working_set_bytes{namespace="gearloan",container!=""}) / 1024 / 1024
+gearloan-backend-6698f6c5d-xj845  =  71.3828125
+gearloan-backend-6698f6c5d-5jmlx  =  70.828125
+gearloan-frontend-6b9fd65d88-k8nft  =  8.578125
+gearloan-frontend-6b9fd65d88-4x56f  =  8.63671875
+gearloan-postgres-0  =  37.22265625
+traffic-generator-5bcbd59994-knzsx  =  2.09375
+
+$ curl -s --data-urlencode 'query=kube_pod_status_ready{namespace="gearloan",condition="true"}' localhost:9090/api/v1/query | jq -r '.data.result[] | "\(.metric | del(.__name__) | to_entries | map(.value) | join(","))  =  \(.value[1])"'   # PromQL: kube_pod_status_ready{namespace="gearloan",condition="true"}
+true,kube-state-metrics,http,10.244.0.253:8080,kube-state-metrics,gearloan,gearloan-backend-6698f6c5d-xj845,kube-prometheus-stack-kube-state-metrics,779a6d12-5412-412b-924b-04eae6845991  =  1
+true,kube-state-metrics,http,10.244.0.253:8080,kube-state-metrics,gearloan,gearloan-postgres-0,kube-prometheus-stack-kube-state-metrics,12001a00-d024-4a84-a0c5-6d605dc417a5  =  1
+true,kube-state-metrics,http,10.244.0.253:8080,kube-state-metrics,gearloan,gearloan-frontend-6b9fd65d88-k8nft,kube-prometheus-stack-kube-state-metrics,6cbf7112-f6c5-472a-922a-a4165c5ca0fb  =  1
+true,kube-state-metrics,http,10.244.0.253:8080,kube-state-metrics,gearloan,gearloan-frontend-6b9fd65d88-4x56f,kube-prometheus-stack-kube-state-metrics,cf6fb717-f255-4473-a8e1-f48542f4c8e8  =  1
+true,kube-state-metrics,http,10.244.0.253:8080,kube-state-metrics,gearloan,gearloan-backend-6698f6c5d-5jmlx,kube-prometheus-stack-kube-state-metrics,c8404ef2-c898-4fc3-a696-bf68f83d4844  =  1
+true,kube-state-metrics,http,10.244.0.253:8080,kube-state-metrics,gearloan,traffic-generator-5bcbd59994-knzsx,kube-prometheus-stack-kube-state-metrics,286aa306-f83c-4721-8093-58b1a0148949  =  1
+
+$ kubectl top pods -n gearloan
+NAME                                 CPU(cores)   MEMORY(bytes)   
+gearloan-backend-6698f6c5d-5jmlx     12m          71Mi            
+gearloan-backend-6698f6c5d-xj845     12m          70Mi            
+gearloan-frontend-6b9fd65d88-4x56f   1m           8Mi             
+gearloan-frontend-6b9fd65d88-k8nft   1m           8Mi             
+gearloan-postgres-0                  12m          37Mi            
+traffic-generator-5bcbd59994-knzsx   33m          2Mi             
+
+$ kubectl logs -n gearloan deploy/gearloan-backend --tail=6
+Found 2 pods, using pod/gearloan-backend-6698f6c5d-5jmlx
+Defaulted container "backend" out of: backend, wait-for-db (init)
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+Starting GearLoan API (version 1.0.1)...
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+$ curl -s localhost:9090/api/v1/alerts | jq -r ".data.alerts[] | select(.labels.alertname|test(\"GearLoan\")) | \"\(.labels.alertname)  state=\(.state)  since=\(.activeAt)\""
+GearLoanHighClientErrorRate  state=firing  since=2026-10-16T19:48:32.632208694Z
+
+# ---- after setting the 404 traffic back to normal (NOT_FOUND_EVERY=4) at 22:26:43 ----
+$ date +%T; curl -s --data-urlencode "query=sum(rate(http_requests_total{job=\"gearloan-backend\",status=~\"4..\"}[2m])) / sum(rate(http_requests_total{job=\"gearloan-backend\"}[2m]))" localhost:9090/api/v1/query | jq -r ".data.result[0].value[1]"; curl -s localhost:9090/api/v1/alerts | jq -r "[.data.alerts[] | select(.labels.alertname|test(\"GearLoan\"))] | if length==0 then \"no GearLoan alerts active (GearLoanHighClientErrorRate resolved)\" else .[] | \"\(.labels.alertname) \(.state)\" end"
+22:30:31
+0.08880994671403196
+no GearLoan alerts active (GearLoanHighClientErrorRate resolved)
+

@@ -1,0 +1,109 @@
+$ kubectl get pods -n argocd
+NAME                                                READY   STATUS    RESTARTS   AGE
+argocd-application-controller-0                     1/1     Running   0          69s
+argocd-applicationset-controller-66d7f7865d-8dm84   1/1     Running   0          70s
+argocd-dex-server-6d8ddc4748-rhsjd                  1/1     Running   0          70s
+argocd-notifications-controller-6bdf867f45-bwxqw    1/1     Running   0          70s
+argocd-redis-5fbd54c8cc-4sj4b                       1/1     Running   0          69s
+argocd-repo-server-66875c66b4-kj98k                 1/1     Running   0          69s
+argocd-server-7f85776b5c-mdrsh                      1/1     Running   0          69s
+
+$ kubectl apply -f gitops/argocd-application.yaml
+application.argoproj.io/gear-status created
+
+$ for i in $(seq 1 40); do s=$(kubectl get application gear-status -n argocd -o jsonpath="{.status.sync.status}/{.status.health.status}"); [ "$s" = "Synced/Healthy" ] && break; sleep 3; done; kubectl get application gear-status -n argocd
+NAME          SYNC STATUS   HEALTH STATUS
+gear-status   Synced        Healthy
+
+$ kubectl get application gear-status -n argocd -o jsonpath="repo: {.spec.source.repoURL}{\"
+\"}path: {.spec.source.path}{\"
+\"}revision: {.status.sync.revision}{\"
+\"}"
+repo: https://github.com/citruswhale/Shell_Scripting_Basics.git
+path: submissions/20-monitoring-gitops/gitops/app
+revision: 83c8c5a2ee434b222013a5151f9dbe66271f2731
+
+$ kubectl get deploy,pods,svc -n s20-gitops
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gear-status   2/2     2            2           3s
+
+NAME                              READY   STATUS    RESTARTS   AGE
+pod/gear-status-d5b9c6bbd-d4tgs   1/1     Running   0          3s
+pod/gear-status-d5b9c6bbd-kstjf   1/1     Running   0          3s
+
+NAME                  TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+service/gear-status   ClusterIP   10.109.54.35   <none>        80/TCP    3s
+
+$ kubectl run c -n s20-gitops --image=curlimages/curl:8.11.1 --rm -i --restart=Never --quiet -- curl -s http://gear-status </dev/null 2>/dev/null | head -1
+GearLoan status page - version 1 (deployed by Argo CD)
+
+# ---- change the desired state in Git: 3 replicas and a new message ----
+$ git -C ../.. diff --stat; git -C ../.. diff submissions/20-monitoring-gitops/gitops/app/deployment.yaml | grep "^[-+] "
+ submissions/20-monitoring-gitops/gitops/app/deployment.yaml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+-  replicas: 2
++  replicas: 3
+-          args: ["-listen=:8080", "-text=GearLoan status page - version 1 (deployed by Argo CD)"]
++          args: ["-listen=:8080", "-text=GearLoan status page - version 2 - changed in Git, synced by Argo CD"]
+
+$ git -C ../.. commit -q -am "Session 20: GitOps demo v2 - three replicas and new status text" && git -C ../.. push -q origin master && git -C ../.. log --oneline -1
+b9ae981 Session 20: GitOps demo v2 - three replicas and new status text
+
+$ kubectl annotate application gear-status -n argocd argocd.argoproj.io/refresh=normal --overwrite   # ask Argo CD to look at Git now instead of waiting for its 3 minute poll
+application.argoproj.io/gear-status annotated
+
+$ NEW=$(git -C ../.. rev-parse HEAD); for i in $(seq 1 60); do r=$(kubectl get application gear-status -n argocd -o jsonpath="{.status.sync.revision}"); s=$(kubectl get application gear-status -n argocd -o jsonpath="{.status.sync.status}/{.status.health.status}"); [ "$r" = "$NEW" ] && [ "$s" = "Synced/Healthy" ] && break; sleep 3; done; kubectl get application gear-status -n argocd -o jsonpath="sync={.status.sync.status} health={.status.health.status} revision={.status.sync.revision}{\"
+\"}"
+sync=Synced health=Healthy revision=b9ae9814729261c1421a0baa0ca1ffae189c0015
+
+$ kubectl rollout status deploy/gear-status -n s20-gitops --timeout=90s; kubectl get pods -n s20-gitops
+deployment "gear-status" successfully rolled out
+NAME                          READY   STATUS      RESTARTS   AGE
+c                             0/1     Completed   0          24s
+gear-status-94b648746-6js48   1/1     Running     0          4s
+gear-status-94b648746-78mtn   1/1     Running     0          3s
+gear-status-94b648746-p5hl6   1/1     Running     0          5s
+
+$ kubectl run check-v2 -n s20-gitops --image=curlimages/curl:8.11.1 --rm -i --restart=Never --quiet -- curl -s http://gear-status </dev/null 2>/dev/null | head -1
+GearLoan status page - version 2 - changed in Git, synced by Argo CD
+
+# ---- drift: someone changes the cluster by hand (scale to 6, delete the Service) ----
+$ date +%T; kubectl scale deploy gear-status -n s20-gitops --replicas=6; kubectl delete svc gear-status -n s20-gitops; date +%T
+21:49:37
+deployment.apps/gear-status scaled
+service "gear-status" deleted from s20-gitops namespace
+21:49:37
+
+$ sleep 10; kubectl get deploy,svc -n s20-gitops; kubectl get application gear-status -n argocd -o jsonpath="sync={.status.sync.status} health={.status.health.status}{\"
+\"}"
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gear-status   3/3     3            3           78s
+sync=OutOfSync health=Healthy
+
+$ kubectl get events -n s20-gitops --sort-by=.lastTimestamp | grep -E "ScalingReplicaSet|gear-status" | tail -6
+10s         Normal    SuccessfulCreate    replicaset/gear-status-94b648746   Created pod: gear-status-94b648746-m88l7
+10s         Normal    SuccessfulCreate    replicaset/gear-status-94b648746   Created pod: gear-status-94b648746-vpg8w
+10s         Normal    Scheduled           pod/gear-status-94b648746-m88l7    Successfully assigned s20-gitops/gear-status-94b648746-m88l7 to devops-lab
+10s         Normal    ScalingReplicaSet   deployment/gear-status             Scaled up replica set gear-status-94b648746 from 3 to 6
+10s         Normal    Scheduled           pod/gear-status-94b648746-vpg8w    Successfully assigned s20-gitops/gear-status-94b648746-vpg8w to devops-lab
+10s         Normal    ScalingReplicaSet   deployment/gear-status             Scaled down replica set gear-status-94b648746 from 6 to 3
+
+$ date +%T; kubectl get deploy,svc -n s20-gitops; kubectl get application gear-status -n argocd -o jsonpath="sync={.status.sync.status} health={.status.health.status}{\"
+\"}"
+21:50:02
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gear-status   3/3     3            3           93s
+
+NAME                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+service/gear-status   ClusterIP   10.110.139.246   <none>        80/TCP    7s
+sync=Synced health=Healthy
+
+$ kubectl get events -n s20-gitops --field-selector involvedObject.kind=Service --sort-by=.lastTimestamp | tail -3; kubectl logs -n argocd argocd-application-controller-0 --since=3m | grep -o "\"msg\":\"[^\"]*\"" | grep -iE "automated sync|self.?heal|Partial sync" | sort | uniq -c
+No resources found in s20-gitops namespace.
+   2 "msg":"Initiated automated sync to '83c8c5a2ee434b222013a5151f9dbe66271f2731'"
+  10 "msg":"Initiated automated sync to 'b9ae9814729261c1421a0baa0ca1ffae189c0015'"
+   4 "msg":"Partial sync operation to b9ae9814729261c1421a0baa0ca1ffae189c0015 succeeded"
+
+$ kubectl run check-heal -n s20-gitops --image=curlimages/curl:8.11.1 --rm -i --restart=Never --quiet -- curl -s http://gear-status </dev/null 2>/dev/null | head -1
+GearLoan status page - version 2 - changed in Git, synced by Argo CD
+
