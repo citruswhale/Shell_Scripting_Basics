@@ -1,0 +1,414 @@
+# Session 17 - DevSecOps pipeline for the loan calculator service
+# Flow: build + unit test -> SAST -> SCA -> secret scan -> docker build
+#       -> image scan -> security gate -> push image -> deploy to Kubernetes (kind)
+# Nothing is pushed or deployed unless every security job passes.
+name: S17 DevSecOps pipeline
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "submissions/17-devsecops/**"
+      - ".github/workflows/s17-devsecops.yml"
+  workflow_dispatch:
+
+# Default for every job: read-only. Jobs that need more ask for it themselves.
+permissions:
+  contents: read
+
+concurrency:
+  group: s17-devsecops-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  S17_DIR: submissions/17-devsecops
+  APP_DIR: submissions/17-devsecops/app
+  IMAGE: ghcr.io/citruswhale/s17-loan-calculator
+  PYTHON_VERSION: "3.12"
+  TRIVY_VERSION: v0.76.0
+  GITLEAKS_VERSION: 8.30.1
+  SEMGREP_VERSION: 1.181.0
+
+jobs:
+  # ---------- 1. Build + unit tests ----------
+  build-test:
+    name: Build and unit test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            ${{ env.APP_DIR }}/requirements.txt
+            ${{ env.APP_DIR }}/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Check the app imports (build step for Python)
+        run: python -c "import app.main; print('import ok')"
+
+      - name: Run pytest
+        run: |
+          mkdir -p reports
+          pytest -v --junitxml=reports/junit.xml
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s17-unit-tests
+          path: ${{ env.APP_DIR }}/reports/
+          retention-days: 7
+
+  # ---------- 2. SAST: Bandit + Semgrep ----------
+  sast:
+    name: SAST (Bandit, Semgrep)
+    runs-on: ubuntu-latest
+    needs: build-test
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: ${{ env.APP_DIR }}/requirements-dev.txt
+
+      # Only the scanners are needed here, SAST reads the source and does not run it
+      - name: Install tools
+        run: pip install "bandit==1.9.4" "semgrep==${SEMGREP_VERSION}"
+
+      - name: Bandit report (JSON)
+        if: always()
+        run: |
+          mkdir -p reports
+          bandit -c ../security/bandit.yaml -r app -f json -o reports/bandit.json --exit-zero
+
+      # Gate: fails on any Bandit finding of low severity or above
+      - name: Bandit gate
+        run: bandit -c ../security/bandit.yaml -r app
+
+      # Gate: --error makes semgrep exit 1 when a rule matches
+      - name: Semgrep gate (p/python rules)
+        run: semgrep scan --config p/python --error --metrics=off --sarif-output=reports/semgrep.sarif app
+
+      - name: Upload SAST reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s17-sast-reports
+          path: ${{ env.APP_DIR }}/reports/
+          retention-days: 7
+
+  # ---------- 3. SCA: pip-audit + Trivy filesystem ----------
+  sca:
+    name: SCA (pip-audit, Trivy fs)
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: ${{ env.APP_DIR }}/requirements-dev.txt
+
+      - name: Install pip-audit
+        run: pip install "pip-audit==2.10.1"
+
+      # Gate: any known vulnerability in the pinned runtime deps fails the job
+      - name: pip-audit gate
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          mkdir -p reports
+          pip-audit -r requirements.txt --strict --desc
+          pip-audit -r requirements.txt --strict -f json -o reports/pip-audit.json
+
+      # Gate: HIGH/CRITICAL with a fix available (settings in security/trivy.yaml)
+      - name: Trivy fs gate
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          scan-type: fs
+          scan-ref: ${{ env.APP_DIR }}
+          trivy-config: ${{ env.S17_DIR }}/security/trivy.yaml
+
+      - name: Upload SCA reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s17-sca-reports
+          path: ${{ env.APP_DIR }}/reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------- 4. Secret scan: Gitleaks over the whole Git history ----------
+  secret-scan:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history, not just the last commit
+
+      - name: Install gitleaks (pinned, checksum checked)
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$file" "$base/$file"
+          curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " ${file}\$" checksums.txt | sha256sum -c -
+          tar -xzf "$file" gitleaks
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+
+      # Uses the default rules. .gitleaksignore in the repo root lists the
+      # known fake lab password from Session 12, nothing else is ignored.
+      - name: Gitleaks gate
+        run: gitleaks git . --redact --verbose --report-format sarif --report-path gitleaks.sarif
+
+      - name: Upload Gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s17-gitleaks-report
+          path: gitleaks.sarif
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------- 5. Docker build (once), saved as an artifact ----------
+  docker-build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build image to a tarball
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ env.APP_DIR }}
+          platforms: linux/amd64
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          outputs: type=docker,dest=${{ runner.temp }}/image.tar
+
+      - name: Upload image tarball
+        uses: actions/upload-artifact@v7
+        with:
+          name: s17-image
+          path: ${{ runner.temp }}/image.tar
+          retention-days: 1
+
+  # ---------- 6. Container image scan ----------
+  image-scan:
+    name: Image scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: docker-build
+    permissions:
+      contents: read
+      security-events: write # only for uploading SARIF to the Security tab
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image tarball
+        uses: actions/download-artifact@v8
+        with:
+          name: s17-image
+          path: ${{ runner.temp }}
+
+      # Gate: table output in the log, exit code 1 on HIGH/CRITICAL (security/trivy.yaml)
+      - name: Trivy image gate
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          input: ${{ runner.temp }}/image.tar
+          trivy-config: ${{ env.S17_DIR }}/security/trivy.yaml
+
+      - name: Trivy JSON report
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          skip-setup-trivy: true
+          input: ${{ runner.temp }}/image.tar
+          trivy-config: ${{ env.S17_DIR }}/security/trivy.yaml
+          exit-code: "0"
+          format: json
+          output: trivy-image.json
+
+      - name: Trivy SARIF report
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          skip-setup-trivy: true
+          input: ${{ runner.temp }}/image.tar
+          trivy-config: ${{ env.S17_DIR }}/security/trivy.yaml
+          exit-code: "0"
+          format: sarif
+          output: trivy-image.sarif
+          limit-severities-for-sarif: true
+
+      - name: Upload image scan reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s17-image-scan-reports
+          path: |
+            trivy-image.json
+            trivy-image.sarif
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Shows results in the repo Security tab. Not a gate, so it may not fail the run.
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image.sarif
+          category: s17-trivy-image
+
+  # ---------- 7. Security gate ----------
+  # Only runs when every check above passed (needs: waits for success by default)
+  security-gate:
+    name: Security gate
+    runs-on: ubuntu-latest
+    needs: [build-test, sast, sca, secret-scan, image-scan]
+    steps:
+      - name: All checks passed
+        run: |
+          {
+            echo "## Security gate: PASSED"
+            echo ""
+            echo "| Check | Tool | Result |"
+            echo "|-------|------|--------|"
+            echo "| Unit tests | pytest | ${{ needs.build-test.result }} |"
+            echo "| SAST | Bandit, Semgrep | ${{ needs.sast.result }} |"
+            echo "| SCA | pip-audit, Trivy fs | ${{ needs.sca.result }} |"
+            echo "| Secret scan | Gitleaks | ${{ needs.secret-scan.result }} |"
+            echo "| Image scan | Trivy image | ${{ needs.image-scan.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "All security checks passed, image can be pushed."
+
+  # ---------- 8. Push the same scanned image ----------
+  push:
+    name: Push image to GHCR
+    runs-on: ubuntu-latest
+    needs: security-gate
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.push.outputs.image }}
+    steps:
+      - name: Download image tarball
+        uses: actions/download-artifact@v8
+        with:
+          name: s17-image
+          path: ${{ runner.temp }}
+
+      - name: Load image
+        run: docker load -i "${{ runner.temp }}/image.tar"
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        id: push
+        run: |
+          ref="${IMAGE}:${GITHUB_SHA}"
+          docker push "$ref"
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$ref")
+          echo "image=$ref" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Pushed image"
+            echo "- Tag: \`$ref\`"
+            echo "- Digest: \`$digest\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------- 9. Deploy to Kubernetes (kind cluster inside the runner) ----------
+  deploy:
+    name: Deploy to Kubernetes (kind)
+    runs-on: ubuntu-latest
+    needs: push
+    permissions:
+      contents: read
+      packages: read
+    env:
+      IMAGE_REF: ${{ needs.push.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: s17-demo
+
+      # Pull the pushed image from GHCR (proves the push worked), then copy it
+      # into kind so the cluster does not need GHCR credentials.
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull image and load into kind
+        run: |
+          docker pull "$IMAGE_REF"
+          kind load docker-image "$IMAGE_REF" --name s17-demo
+
+      - name: Apply manifests
+        run: |
+          kubectl apply -f "$S17_DIR/k8s/namespace.yaml"
+          kubectl apply -f "$S17_DIR/k8s/deployment.yaml" -f "$S17_DIR/k8s/service.yaml"
+          kubectl -n s17 set image deployment/loan-calculator loan-calculator="$IMAGE_REF"
+          kubectl -n s17 set env deployment/loan-calculator APP_COMMIT="$GITHUB_SHA"
+
+      - name: Wait for rollout
+        run: kubectl -n s17 rollout status deployment/loan-calculator --timeout=150s
+
+      - name: Smoke test
+        run: |
+          kubectl -n s17 port-forward svc/loan-calculator 8080:80 >/tmp/pf.log 2>&1 &
+          sleep 3
+          curl -sf --retry 5 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/health
+          echo
+          version=$(curl -sf http://127.0.0.1:8080/version)
+          echo "GET /version -> $version"
+          echo "$version" | grep -q "\"commit\":\"${GITHUB_SHA}\"" || { echo "wrong commit deployed"; exit 1; }
+          fee=$(curl -sf "http://127.0.0.1:8080/fee?days_late=5&daily_rate=20")
+          echo "GET /fee?days_late=5&daily_rate=20 -> $fee"
+          echo "$fee" | grep -q '"fee":80.0' || { echo "unexpected fee"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/fee?days_late=-1&daily_rate=20")
+          echo "GET /fee with days_late=-1 -> HTTP $code"
+          [ "$code" = "422" ] || { echo "validation did not reject bad input"; exit 1; }
+          {
+            echo "## Deploy"
+            echo "Smoke test passed on kind."
+            echo '```'
+            echo "/version -> $version"
+            echo "/fee     -> $fee"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show cluster state
+        if: always()
+        run: kubectl -n s17 get deploy,pods,svc -o wide

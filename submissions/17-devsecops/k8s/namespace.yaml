@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: s17
+  labels:
+    # Reject pods that break the "restricted" Pod Security Standard
+    pod-security.kubernetes.io/enforce: restricted

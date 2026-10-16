@@ -1,0 +1,211 @@
+# Session 16 - CI/CD demo for the gear availability API
+# CI  = test + build (every push)
+# CD  = deploy the new image to a throwaway kind cluster and check it answers
+name: S16 CI/CD demo
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "submissions/16-cicd/**"
+      - ".github/workflows/s16-cicd.yml"
+  workflow_dispatch:
+
+# GITHUB_TOKEN only gets what is listed here
+permissions:
+  contents: read
+  packages: write
+
+env:
+  APP_DIR: submissions/16-cicd/app
+  K8S_DIR: submissions/16-cicd/k8s
+  # GHCR needs a lowercase owner name
+  IMAGE: ghcr.io/citruswhale/s16-gear-api
+
+jobs:
+  # ---------- CI: unit tests ----------
+  test:
+    name: Test (CI)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ env.APP_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        # Writes test-report.txt and test-results.xml as well as printing to the log
+        run: npm run test:report
+
+      - name: Add test results to job summary
+        if: always()
+        run: |
+          {
+            echo "## Unit tests"
+            echo '```'
+            tail -n 9 test-report.txt || echo "no report"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s16-test-report
+          path: |
+            ${{ env.APP_DIR }}/test-report.txt
+            ${{ env.APP_DIR }}/test-results.xml
+          retention-days: 7
+
+  # ---------- CI: build and push the image ----------
+  build:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Image name
+        id: meta
+        run: echo "image=${IMAGE}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # GITHUB_TOKEN is a secret GitHub creates for every run, so no manual secret is needed
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ env.APP_DIR }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Write build info
+        run: |
+          cat > build-info.txt <<EOF
+          image:   ${{ steps.meta.outputs.image }}
+          digest:  ${{ steps.push.outputs.digest }}
+          commit:  ${GITHUB_SHA}
+          run:     ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          EOF
+          cat build-info.txt
+          {
+            echo "## Image"
+            echo '```'
+            cat build-info.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload build info
+        uses: actions/upload-artifact@v7
+        with:
+          name: s16-build-info
+          path: build-info.txt
+          retention-days: 7
+
+      # Optional secret demo: this step only runs if a repo secret called DEMO_SECRET exists.
+      # The value is never printed, GitHub would mask it as *** anyway.
+      - name: Secret demo (optional)
+        env:
+          DEMO_SECRET: ${{ secrets.DEMO_SECRET }}
+        run: |
+          if [ -n "$DEMO_SECRET" ]; then
+            echo "DEMO_SECRET is set (length ${#DEMO_SECRET})"
+          else
+            echo "DEMO_SECRET is not set, skipping. GITHUB_TOKEN was still used above to log in to GHCR."
+          fi
+
+  # ---------- CD: deploy to a kind cluster ----------
+  deploy:
+    name: Deploy to kind (CD)
+    runs-on: ubuntu-latest
+    needs: build
+    environment: s16-demo
+    env:
+      IMAGE_REF: ${{ needs.build.outputs.image }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: s16-demo
+
+      # The GHCR package is private by default, so pull here (runner is logged in)
+      # and copy the image into kind instead of letting the cluster pull it.
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull image and load into kind
+        run: |
+          docker pull "$IMAGE_REF"
+          kind load docker-image "$IMAGE_REF" --name s16-demo
+
+      - name: Apply manifests
+        run: |
+          kubectl apply -f "$K8S_DIR/namespace.yaml"
+          kubectl apply -f "$K8S_DIR/deployment.yaml" -f "$K8S_DIR/service.yaml"
+          kubectl -n s16 set image deployment/gear-api gear-api="$IMAGE_REF"
+          kubectl -n s16 set env deployment/gear-api APP_COMMIT="$GITHUB_SHA"
+
+      - name: Wait for rollout
+        run: kubectl -n s16 rollout status deployment/gear-api --timeout=120s
+
+      - name: Smoke test
+        run: |
+          kubectl -n s16 port-forward svc/gear-api 8080:80 >/tmp/pf.log 2>&1 &
+          sleep 3
+          body=$(curl -sf --retry 5 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/)
+          echo "GET / -> $body"
+          echo "$body" | grep -q "\"commit\":\"${GITHUB_SHA}\"" || { echo "commit SHA not found in response"; exit 1; }
+          curl -sf http://127.0.0.1:8080/health
+          echo
+          curl -sf http://127.0.0.1:8080/api/gear
+          echo
+          {
+            echo "## Deploy"
+            echo "Smoke test passed. \`GET /\` returned:"
+            echo '```json'
+            echo "$body"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show cluster state
+        if: always()
+        run: |
+          kubectl -n s16 get pods,svc -o wide
+          kubectl -n s16 describe deployment gear-api | tail -n 20

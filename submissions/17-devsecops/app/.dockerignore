@@ -1,0 +1,10 @@
+.venv
+__pycache__
+.pytest_cache
+reports
+tests
+requirements-dev.txt
+requirements.in
+Dockerfile
+.dockerignore
+.gitignore

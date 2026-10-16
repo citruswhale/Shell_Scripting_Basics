@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gear-api
+  namespace: s16
+  labels:
+    app: gear-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gear-api
+  template:
+    metadata:
+      labels:
+        app: gear-api
+    spec:
+      containers:
+        - name: gear-api
+          # The CD job replaces this tag with the commit SHA (kubectl set image)
+          image: ghcr.io/citruswhale/s16-gear-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: APP_COMMIT
+              value: "unknown"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
