@@ -1,14 +1,106 @@
-$ docker compose up --build -d --wait   (2026-10-16 21:23:50 CEST)
+$ docker compose up --build -d --wait     # 2026-10-16 22:37 CEST, MacBook (Apple M5), Docker 29.8.2
  Image gearloan-backend:local Building 
  Image gearloan-frontend:local Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.18kB done
+#1 DONE 0.0s
+#2 [frontend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 928B done
+#2 DONE 0.0s
+#3 [backend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 1.22kB done
+#3 DONE 0.0s
+#4 [frontend internal] load metadata for docker.io/library/node:24-alpine
+#4 ...
+#5 [frontend internal] load metadata for docker.io/nginxinc/nginx-unprivileged:1.30-alpine
+#5 DONE 0.3s
+#4 [frontend internal] load metadata for docker.io/library/node:24-alpine
+#4 DONE 0.3s
+#6 [frontend internal] load .dockerignore
+#6 transferring context: 120B done
+#6 DONE 0.0s
+#7 [backend internal] load metadata for docker.io/library/python:3.12-slim
+#7 DONE 0.3s
+#8 [backend internal] load .dockerignore
+#8 transferring context: 163B done
+#8 DONE 0.0s
+#9 [backend internal] load build context
+#9 transferring context: 1.61kB done
+#9 DONE 0.0s
+#10 [frontend build 1/8] FROM docker.io/library/node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f
+#10 resolve docker.io/library/node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f 0.0s done
+#10 DONE 0.0s
+#11 [frontend stage-1 1/3] FROM docker.io/nginxinc/nginx-unprivileged:1.30-alpine@sha256:782bb89768cc87b7f95c18b95baa1af250e5d451f26794f59363540161147c01
+#11 resolve docker.io/nginxinc/nginx-unprivileged:1.30-alpine@sha256:782bb89768cc87b7f95c18b95baa1af250e5d451f26794f59363540161147c01 0.0s done
+#11 DONE 0.0s
+#12 [backend builder 1/4] FROM docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+#12 resolve docker.io/library/python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 0.0s done
+#12 DONE 0.0s
+#13 [backend stage-1 5/7] COPY --chown=10001:10001 alembic.ini entrypoint.sh ./
+#13 CACHED
+#14 [backend builder 4/4] RUN pip install -r requirements.txt
+#14 CACHED
+#15 [backend builder 2/4] RUN python -m venv /opt/venv
+#15 CACHED
+#16 [backend stage-1 3/7] WORKDIR /app
+#16 CACHED
+#17 [backend builder 3/4] COPY requirements.txt .
+#17 CACHED
+#18 [backend stage-1 2/7] RUN groupadd --system --gid 10001 gearloan  && useradd --system --uid 10001 --gid gearloan --no-create-home --shell /usr/sbin/nologin gearloan
+#18 CACHED
+#19 [backend stage-1 4/7] COPY --from=builder /opt/venv /opt/venv
+#19 CACHED
+#20 [backend stage-1 6/7] COPY --chown=10001:10001 alembic ./alembic
+#20 CACHED
+#21 [backend stage-1 7/7] COPY --chown=10001:10001 app ./app
+#21 CACHED
+#22 [frontend internal] load build context
+#22 transferring context: 923B done
+#22 DONE 0.0s
+#23 [frontend build 4/8] RUN npm ci --no-audit --no-fund
+#23 CACHED
+#24 [frontend build 8/8] RUN npm run build
+#24 CACHED
+#25 [frontend build 7/8] COPY src ./src
+#25 CACHED
+#26 [frontend build 5/8] COPY index.html vite.config.js ./
+#26 CACHED
+#27 [frontend build 2/8] WORKDIR /app
+#27 CACHED
+#28 [frontend stage-1 2/3] COPY --chown=101:101 nginx/default.conf.template /etc/nginx/templates/default.conf.template
+#28 CACHED
+#29 [frontend build 3/8] COPY package.json package-lock.json ./
+#29 CACHED
+#30 [frontend build 6/8] COPY public ./public
+#30 CACHED
+#31 [frontend stage-1 3/3] COPY --from=build --chown=101:101 /app/dist /usr/share/nginx/html
+#31 CACHED
+#32 [backend] exporting to image
+#32 exporting layers done
+#32 exporting manifest sha256:1d1dba6ce7bbe7d40030a51aa33628e23982815684daab2c29eaef9c3810a685 done
+#32 exporting config sha256:f2532d6f389bfbe303b7f7c280dff95c0979aec4dd22d2ef7769e773b97a5e7f done
+#32 exporting attestation manifest sha256:da7e1c53ceb07cc25f98dc7a84f5395d01a295694ffdb13f994dce42957f5bdd done
+#32 exporting manifest list sha256:f61c527688d5963f0d5e879201b6b49351f1662561e3d86324fae651ae3c2859 done
+#32 naming to docker.io/library/gearloan-backend:local done
+#32 unpacking to docker.io/library/gearloan-backend:local done
+#32 DONE 0.0s
+#33 [frontend] exporting to image
+#33 exporting layers done
+#33 exporting manifest sha256:90fe636864da27e07d06ff1974b0bf2f6215ea6f058272d7595a0b5149c795be done
+#33 exporting config sha256:5c6d822edfbada502d750acc8336ba649f2c875ee150339260758dcf1b00aa76 done
+#33 exporting attestation manifest sha256:0b151c140e8fd54f36c238d2a8239cf6d36862f30372b68e989cfc7a6156d970 done
+#33 exporting manifest list sha256:78f479a66d42760d7163cba35cf98974b3914032d1b55952b42f5211ff95aa04 done
+#33 naming to docker.io/library/gearloan-frontend:local done
+#33 unpacking to docker.io/library/gearloan-frontend:local done
+#33 DONE 0.0s
+#34 [backend] resolving provenance for metadata file
+#34 DONE 0.0s
+#35 [frontend] resolving provenance for metadata file
+#35 DONE 0.0s
  Image gearloan-backend:local Built 
  Image gearloan-frontend:local Built 
  Network gearloan_default Creating 
  Network gearloan_default Creating 
- Volume gearloan_pgdata Creating 
- Volume gearloan_pgdata Creating 
- Volume gearloan_pgdata Created 
- Volume gearloan_pgdata Created 
  Network gearloan_default Created 
  Network gearloan_default Created 
  Container gearloan-postgres-1 Creating 
@@ -27,11 +119,11 @@ $ docker compose up --build -d --wait   (2026-10-16 21:23:50 CEST)
  Container gearloan-backend-1 Healthy 
  Container gearloan-frontend-1 Starting 
  Container gearloan-frontend-1 Started 
- Container gearloan-frontend-1 Waiting 
  Container gearloan-postgres-1 Waiting 
  Container gearloan-backend-1 Waiting 
- Container gearloan-postgres-1 Healthy 
+ Container gearloan-frontend-1 Waiting 
  Container gearloan-backend-1 Healthy 
+ Container gearloan-postgres-1 Healthy 
  Container gearloan-frontend-1 Healthy 
 
 $ docker compose ps
@@ -40,30 +132,11 @@ gearloan-backend-1    gearloan-backend:local    "./entrypoint.sh"        backend
 gearloan-frontend-1   gearloan-frontend:local   "/docker-entrypoint.…"   frontend   16 seconds ago   Up 5 seconds (healthy)    0.0.0.0:3000->8080/tcp, [::]:3000->8080/tcp
 gearloan-postgres-1   postgres:17-alpine        "docker-entrypoint.s…"   postgres   16 seconds ago   Up 16 seconds (healthy)   5432/tcp
 
-$ docker compose logs backend
-backend-1  | Running database migrations...
-backend-1  | INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
-backend-1  | INFO  [alembic.runtime.migration] Will assume transactional DDL.
-backend-1  | INFO  [alembic.runtime.migration] Running upgrade  -> 0001_initial, Create items and loans tables
-backend-1  | Starting GearLoan API (version 1.0.0)...
-backend-1  | INFO:     Started server process [1]
-backend-1  | INFO:     Waiting for application startup.
-backend-1  | INFO:     Application startup complete.
-backend-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+$ curl -s http://localhost:3000/api/health; curl -s http://localhost:3000/api/info; curl -s http://localhost:3000/api/stats
+{"status":"ok"}
+{"name":"GearLoan","version":"1.0.0"}
+{"items_total":8,"available":4,"on_loan":3,"maintenance":1,"active_loans":3,"overdue_loans":1}
 
-$ docker compose logs frontend | grep -v 'worker process'
-frontend-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
-frontend-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
-frontend-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
-frontend-1  | 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
-frontend-1  | 10-listen-on-ipv6-by-default.sh: info: /etc/nginx/conf.d/default.conf differs from the packaged version
-frontend-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
-frontend-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
-frontend-1  | 20-envsubst-on-templates.sh: Running envsubst on /etc/nginx/templates/default.conf.template to /etc/nginx/conf.d/default.conf
-frontend-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
-frontend-1  | /docker-entrypoint.sh: Configuration complete; ready for start up
-frontend-1  | 2026/10/16 19:24:02 [notice] 1#1: using the "epoll" event method
-frontend-1  | 2026/10/16 19:24:02 [notice] 1#1: nginx/1.30.6
-frontend-1  | 2026/10/16 19:24:02 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0) 
-frontend-1  | 2026/10/16 19:24:02 [notice] 1#1: OS: Linux 7.0.14-linuxkit
-frontend-1  | 2026/10/16 19:24:02 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1048576:1048576
+$ docker compose exec backend id; docker compose exec frontend id
+uid=10001(gearloan) gid=10001(gearloan) groups=10001(gearloan)
+uid=101(nginx) gid=101(nginx) groups=101(nginx)

@@ -1,0 +1,22 @@
+20:36:15 loaded, stats: 8 Total items 4 Available 3 On loan 1 Maintenance 3 Open loans 1 Overdue
+20:36:16 screenshot e2e-01-validation-error
+20:36:16 validation text: Name String should have at least 2 characters
+20:36:16 item added
+20:36:16 rows after search "gopro": 1
+20:36:17 screenshot e2e-02-search
+20:36:18 rows with category=camera: 3
+20:36:18 item renamed to "GoPro HERO12 Black"
+20:36:19 screenshot e2e-03-lend-form
+20:36:19 lent; row now shows On Loan
+20:36:20 screenshot e2e-04-after-lend
+20:36:21 screenshot e2e-05-loans-all
+20:36:22 overdue loans shown: 1
+20:36:23 screenshot e2e-06-loans-overdue
+20:36:24 screenshot e2e-07-return-dialog
+20:36:26 returned loans shown: 1
+20:36:27 screenshot e2e-08-loans-returned
+20:36:27 after reload, GoPro row still present and status: GoPro HERO12 Black Added from the browser test camera CAM-GOPRO-12 Good Available LendEditDelete
+20:36:27 confirm dialog: Delete "GoPro HERO12 Black"? This cannot be undone.
+20:36:27 item deleted; stats: 8 Total items 4 Available 3 On loan 1 Maintenance 3 Open loans 1 Overdue
+20:36:28 screenshot e2e-09-after-delete
+20:36:28 done
