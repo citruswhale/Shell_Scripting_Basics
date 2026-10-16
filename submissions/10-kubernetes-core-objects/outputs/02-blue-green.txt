@@ -1,0 +1,72 @@
+$ kubectl apply -f 02-blue-green/ && kubectl rollout status deploy/web-blue -n s10 && kubectl rollout status deploy/web-green -n s10
+deployment.apps/web-blue created
+deployment.apps/web-green created
+service/web-bg created
+Waiting for deployment "web-blue" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "web-blue" rollout to finish: 1 of 2 updated replicas are available...
+deployment "web-blue" successfully rolled out
+Waiting for deployment "web-green" rollout to finish: 1 of 2 updated replicas are available...
+deployment "web-green" successfully rolled out
+
+$ kubectl get pods -n s10 -l app=web-bg -L color -o wide
+NAME                         READY   STATUS    RESTARTS   AGE   IP            NODE         NOMINATED NODE   READINESS GATES   COLOR
+web-blue-6b44f58d6-nfbfh     1/1     Running   0          1s    10.244.0.26   devops-lab   <none>           <none>            blue
+web-blue-6b44f58d6-rnrj9     1/1     Running   0          1s    10.244.0.25   devops-lab   <none>           <none>            blue
+web-green-5fddf6b6d7-452zh   1/1     Running   0          1s    10.244.0.28   devops-lab   <none>           <none>            green
+web-green-5fddf6b6d7-zxg68   1/1     Running   0          1s    10.244.0.27   devops-lab   <none>           <none>            green
+
+$ kubectl get svc web-bg -n s10 -o jsonpath="selector: {.spec.selector}{\"
+\"}"
+selector: {"app":"web-bg","color":"blue"}
+
+$ kubectl get endpointslices -n s10 -l kubernetes.io/service-name=web-bg
+NAME           ADDRESSTYPE   PORTS   ENDPOINTS                 AGE
+web-bg-zj2ff   IPv4          8080    10.244.0.25,10.244.0.26   1s
+
+$ kubectl exec -n s10 client -- sh -c "for i in 1 2 3 4; do curl -s web-bg; done"
+BLUE - version 1
+BLUE - version 1
+BLUE - version 1
+BLUE - version 1
+
+$ kubectl patch svc web-bg -n s10 -p "{\"spec\":{\"selector\":{\"app\":\"web-bg\",\"color\":\"green\"}}}"
+service/web-bg patched
+
+$ kubectl get svc web-bg -n s10 -o jsonpath="selector: {.spec.selector}{\"
+\"}"
+selector: {"app":"web-bg","color":"green"}
+
+$ kubectl get endpointslices -n s10 -l kubernetes.io/service-name=web-bg
+NAME           ADDRESSTYPE   PORTS   ENDPOINTS                 AGE
+web-bg-zj2ff   IPv4          8080    10.244.0.28,10.244.0.27   1s
+
+$ kubectl exec -n s10 client -- sh -c "for i in 1 2 3 4; do curl -s web-bg; done"
+BLUE - version 1
+BLUE - version 1
+BLUE - version 1
+BLUE - version 1
+
+$ kubectl patch svc web-bg -n s10 -p "{\"spec\":{\"selector\":{\"app\":\"web-bg\",\"color\":\"blue\"}}}" && kubectl exec -n s10 client -- curl -s web-bg
+service/web-bg patched
+BLUE - version 1
+
+# ---- Retry: switch to green again, then wait a few seconds for kube-proxy to update its rules ----
+$ kubectl patch svc web-bg -n s10 -p "{\"spec\":{\"selector\":{\"app\":\"web-bg\",\"color\":\"green\"}}}"
+service/web-bg patched
+
+$ kubectl exec -n s10 client -- sh -c "for i in \$(seq 1 10); do echo \"\$(date +%T.%N | cut -c1-12) \$(curl -s web-bg)\"; sleep 0.5; done"
+17:48:56. GREEN - version 2
+17:48:57. GREEN - version 2
+17:48:57. GREEN - version 2
+17:48:58. GREEN - version 2
+17:48:58. GREEN - version 2
+17:48:59. GREEN - version 2
+17:48:59. GREEN - version 2
+17:49:00. GREEN - version 2
+17:49:01. GREEN - version 2
+17:49:01. GREEN - version 2
+
+$ kubectl get endpointslices -n s10 -l kubernetes.io/service-name=web-bg
+NAME           ADDRESSTYPE   PORTS   ENDPOINTS                 AGE
+web-bg-zj2ff   IPv4          8080    10.244.0.27,10.244.0.28   54s
+

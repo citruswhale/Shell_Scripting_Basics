@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: life-termination
+  namespace: s10
+spec:
+  terminationGracePeriodSeconds: 20
+  containers:
+    - name: app
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - |
+          trap 'echo "got SIGTERM, cleaning up"; sleep 5; echo "cleanup done"; exit 0' TERM
+          echo "app running"
+          while true; do sleep 1; done

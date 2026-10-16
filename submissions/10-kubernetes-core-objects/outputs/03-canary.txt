@@ -1,0 +1,61 @@
+$ kubectl apply -f 03-canary/ && kubectl rollout status deploy/web-stable -n s10 && kubectl rollout status deploy/web-canary -n s10
+deployment.apps/web-canary created
+deployment.apps/web-stable created
+service/web-canary created
+Waiting for deployment "web-stable" rollout to finish: 0 of 4 updated replicas are available...
+Waiting for deployment "web-stable" rollout to finish: 1 of 4 updated replicas are available...
+Waiting for deployment "web-stable" rollout to finish: 2 of 4 updated replicas are available...
+Waiting for deployment "web-stable" rollout to finish: 3 of 4 updated replicas are available...
+deployment "web-stable" successfully rolled out
+deployment "web-canary" successfully rolled out
+
+$ kubectl get pods -n s10 -l app=web-canary -L track
+NAME                          READY   STATUS    RESTARTS   AGE   TRACK
+web-canary-78c566c664-pwbjr   1/1     Running   0          1s    canary
+web-stable-5d66d85977-2xfvj   1/1     Running   0          1s    stable
+web-stable-5d66d85977-8cb6s   1/1     Running   0          1s    stable
+web-stable-5d66d85977-hw5d9   1/1     Running   0          1s    stable
+web-stable-5d66d85977-t6gnk   1/1     Running   0          1s    stable
+
+$ kubectl get endpointslices -n s10 -l kubernetes.io/service-name=web-canary -o jsonpath="{range .items[*].endpoints[*]}{.addresses[0]}  {.targetRef.name}{\"
+\"}{end}"
+10.244.0.33  web-stable-5d66d85977-2xfvj
+10.244.0.29  web-canary-78c566c664-pwbjr
+10.244.0.31  web-stable-5d66d85977-hw5d9
+10.244.0.32  web-stable-5d66d85977-8cb6s
+10.244.0.30  web-stable-5d66d85977-t6gnk
+
+$ kubectl exec -n s10 client -- sh -c "for i in \$(seq 1 200); do curl -s web-canary; done | sort | uniq -c"
+     39 CANARY - version 2
+    155 STABLE - version 1
+
+$ kubectl scale deploy/web-canary -n s10 --replicas=4 && kubectl scale deploy/web-stable -n s10 --replicas=0 && kubectl rollout status deploy/web-canary -n s10 && sleep 3 && kubectl exec -n s10 client -- sh -c "for i in \$(seq 1 50); do curl -s web-canary; done | sort | uniq -c"
+deployment.apps/web-canary scaled
+deployment.apps/web-stable scaled
+Waiting for deployment "web-canary" rollout to finish: 1 of 4 updated replicas are available...
+Waiting for deployment "web-canary" rollout to finish: 2 of 4 updated replicas are available...
+Waiting for deployment "web-canary" rollout to finish: 3 of 4 updated replicas are available...
+deployment "web-canary" successfully rolled out
+     50 CANARY - version 2
+
+# ---- Retry: back to 4 stable + 1 canary, wait for all Pods to be Ready, then count failures too ----
+$ kubectl scale deploy/web-stable -n s10 --replicas=4 && kubectl scale deploy/web-canary -n s10 --replicas=1 && kubectl rollout status deploy/web-stable -n s10 && kubectl rollout status deploy/web-canary -n s10 && sleep 5 && kubectl get pods -n s10 -l app=web-canary -L track
+deployment.apps/web-stable scaled
+deployment.apps/web-canary scaled
+Waiting for deployment "web-stable" rollout to finish: 0 of 4 updated replicas are available...
+Waiting for deployment "web-stable" rollout to finish: 1 of 4 updated replicas are available...
+Waiting for deployment "web-stable" rollout to finish: 2 of 4 updated replicas are available...
+Waiting for deployment "web-stable" rollout to finish: 3 of 4 updated replicas are available...
+deployment "web-stable" successfully rolled out
+deployment "web-canary" successfully rolled out
+NAME                          READY   STATUS    RESTARTS   AGE   TRACK
+web-canary-78c566c664-pwbjr   1/1     Running   0          58s   canary
+web-stable-5d66d85977-9btxj   1/1     Running   0          5s    stable
+web-stable-5d66d85977-jmrm4   1/1     Running   0          5s    stable
+web-stable-5d66d85977-xdtjb   1/1     Running   0          5s    stable
+web-stable-5d66d85977-zqmjx   1/1     Running   0          5s    stable
+
+$ kubectl exec -n s10 client -- sh -c "for i in \$(seq 1 500); do curl -s --max-time 2 web-canary || echo FAILED; done | sort | uniq -c"
+    113 CANARY - version 2
+    387 STABLE - version 1
+

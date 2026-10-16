@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: life-imagepull
+  namespace: s10
+spec:
+  containers:
+    - name: web
+      image: nginx:this-tag-does-not-exist

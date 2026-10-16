@@ -1,0 +1,171 @@
+$ date +%T; kubectl apply -f 05-pod-lifecycle/
+20:00:41
+pod/life-running created
+pod/life-pending created
+pod/life-succeeded created
+pod/life-failed created
+pod/life-crashloop created
+pod/life-imagepull created
+pod/life-readiness created
+pod/life-liveness created
+pod/life-startup created
+pod/life-init created
+pod/life-multi created
+pod/life-termination created
+
+$ date +%T; kubectl get pods -n s10 -l '!run'   # snapshot ~8s after apply
+20:00:49
+NAME               READY   STATUS         RESTARTS     AGE
+life-crashloop     0/1     Error          1 (6s ago)   8s
+life-failed        0/1     Error          0            8s
+life-imagepull     0/1     ErrImagePull   0            8s
+life-init          0/1     Init:0/1       0            8s
+life-liveness      1/1     Running        0            8s
+life-multi         2/2     Running        0            8s
+life-pending       0/1     Pending        0            8s
+life-readiness     0/1     Running        0            8s
+life-running       1/1     Running        0            8s
+life-startup       0/1     Running        0            8s
+life-succeeded     0/1     Completed      0            8s
+life-termination   1/1     Running        0            8s
+
+$ date +%T; kubectl get pods -n s10 -l '!run'   # snapshot ~35s after apply
+20:01:14
+NAME               READY   STATUS         RESTARTS      AGE
+life-crashloop     0/1     Error          2 (28s ago)   33s
+life-failed        0/1     Error          0             33s
+life-imagepull     0/1     ErrImagePull   0             33s
+life-init          1/1     Running        0             33s
+life-liveness      1/1     Running        0             33s
+life-multi         2/2     Running        0             33s
+life-pending       0/1     Pending        0             33s
+life-readiness     1/1     Running        0             33s
+life-running       1/1     Running        0             33s
+life-startup       1/1     Running        0             33s
+life-succeeded     0/1     Completed      0             33s
+life-termination   1/1     Running        0             33s
+
+$ date +%T; kubectl get pods -n s10 -l '!run'   # snapshot ~70s after apply
+20:09:27
+NAME               READY   STATUS             RESTARTS      AGE
+life-crashloop     0/1     Error              3 (45s ago)   67s
+life-failed        0/1     Error              0             67s
+life-imagepull     0/1     ImagePullBackOff   0             67s
+life-init          1/1     Running            0             67s
+life-liveness      1/1     Running            1 (16s ago)   67s
+life-multi         2/2     Running            0             67s
+life-pending       0/1     Pending            0             67s
+life-readiness     1/1     Running            0             67s
+life-running       1/1     Running            0             67s
+life-startup       1/1     Running            0             67s
+life-succeeded     0/1     Completed          0             67s
+life-termination   1/1     Running            0             67s
+
+$ kubectl describe pod life-pending -n s10 | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason            Age                    From               Message
+  ----     ------            ----                   ----               -------
+  Warning  FailedScheduling  8m42s (x3 over 8m47s)  default-scheduler  0/1 nodes are available: 1 Insufficient cpu. preemption: 0/1 nodes are available: 1 Preemption is not helpful for scheduling.
+
+$ kubectl describe pod life-imagepull -n s10 | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason     Age                    From               Message
+  ----     ------     ----                   ----               -------
+  Normal   Scheduled  8m47s                  default-scheduler  Successfully assigned s10/life-imagepull to devops-lab
+  Normal   Pulling    8m7s (x3 over 8m47s)   kubelet            spec.containers{web}: Pulling image "nginx:this-tag-does-not-exist"
+  Warning  Failed     8m6s (x3 over 8m45s)   kubelet            spec.containers{web}: Failed to pull image "nginx:this-tag-does-not-exist": rpc error: code = NotFound desc = failed to pull and unpack image "docker.io/library/nginx:this-tag-does-not-exist": failed to resolve reference "docker.io/library/nginx:this-tag-does-not-exist": docker.io/library/nginx:this-tag-does-not-exist: not found
+  Warning  Failed     8m6s (x3 over 8m45s)   kubelet            spec.containers{web}: Error: ErrImagePull
+  Normal   BackOff    7m42s (x4 over 8m45s)  kubelet            spec.containers{web}: Back-off pulling image "nginx:this-tag-does-not-exist"
+  Warning  Failed     7m42s (x4 over 8m45s)  kubelet            spec.containers{web}: Error: ImagePullBackOff
+
+$ kubectl get pod life-succeeded -n s10 -o jsonpath="phase={.status.phase} exitCode={.status.containerStatuses[0].state.terminated.exitCode} reason={.status.containerStatuses[0].state.terminated.reason}{\"
+\"}"; kubectl logs life-succeeded -n s10
+phase=Succeeded exitCode=0 reason=Completed
+doing some work
+done
+
+$ kubectl get pod life-failed -n s10 -o jsonpath="phase={.status.phase} exitCode={.status.containerStatuses[0].state.terminated.exitCode} reason={.status.containerStatuses[0].state.terminated.reason}{\"
+\"}"; kubectl logs life-failed -n s10
+phase=Failed exitCode=1 reason=Error
+something went wrong
+
+$ kubectl get pod life-crashloop -n s10 -o jsonpath="restarts={.status.containerStatuses[0].restartCount} waiting={.status.containerStatuses[0].state.waiting.reason} lastExit={.status.containerStatuses[0].lastState.terminated.exitCode}{\"
+\"}"; kubectl logs life-crashloop -n s10 --previous
+restarts=3 waiting= lastExit=1
+unable to retrieve container logs for containerd://68e04162fa112f5d576aa9b24bae8a200f8d132cd3f26fe9311d6ea36e309d29
+$ kubectl describe pod life-crashloop -n s10 | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason     Age                   From               Message
+  ----     ------     ----                  ----               -------
+  Normal   Scheduled  8m47s                 default-scheduler  Successfully assigned s10/life-crashloop to devops-lab
+  Normal   Pulled     8m3s (x4 over 8m47s)  kubelet            spec.containers{app}: Container image "busybox:1.36" already present on machine and can be accessed by the pod
+  Normal   Created    8m3s (x4 over 8m47s)  kubelet            spec.containers{app}: Container created
+  Normal   Started    8m3s (x4 over 8m47s)  kubelet            spec.containers{app}: Container started
+  Warning  BackOff    8m (x3 over 8m41s)    kubelet            spec.containers{app}: Back-off restarting failed container app in pod life-crashloop_s10(3e667147-353d-4f9e-84fc-6b3978baf850)
+
+$ kubectl get events -n s10 --field-selector involvedObject.name=life-readiness --sort-by=.lastTimestamp; kubectl get pod life-readiness -n s10
+LAST SEEN   TYPE      REASON      OBJECT               MESSAGE
+11m         Normal    Scheduled   pod/life-readiness   Successfully assigned s10/life-readiness to devops-lab
+11m         Normal    Pulling     pod/life-readiness   Pulling image "busybox:1.36"
+2m45s       Normal    Pulled      pod/life-readiness   Successfully pulled image "busybox:1.36" in 1.234s (31.536s including waiting). Image size: 1906887 bytes.
+2m45s       Normal    Created     pod/life-readiness   Container created
+2m44s       Normal    Started     pod/life-readiness   Container started
+2m25s       Warning   Unhealthy   pod/life-readiness   Readiness probe failed:
+119s        Normal    Killing     pod/life-readiness   Stopping container app
+67s         Normal    Scheduled   pod/life-readiness   Successfully assigned s10/life-readiness to devops-lab
+67s         Normal    Pulled      pod/life-readiness   Container image "busybox:1.36" already present on machine and can be accessed by the pod
+67s         Normal    Created     pod/life-readiness   Container created
+66s         Normal    Started     pod/life-readiness   Container started
+48s         Warning   Unhealthy   pod/life-readiness   Readiness probe failed:
+NAME             READY   STATUS    RESTARTS   AGE
+life-readiness   1/1     Running   0          67s
+
+$ kubectl get pod life-liveness -n s10 -o jsonpath="restarts={.status.containerStatuses[0].restartCount}{\"
+\"}"; kubectl describe pod life-liveness -n s10 | sed -n "/Events:/,\$p"
+restarts=1
+Events:
+  Type     Reason     Age                    From               Message
+  ----     ------     ----                   ----               -------
+  Normal   Scheduled  8m47s                  default-scheduler  Successfully assigned s10/life-liveness to devops-lab
+  Normal   Killing    8m26s                  kubelet            spec.containers{app}: Container app failed liveness probe, will be restarted
+  Normal   Pulled     7m56s (x2 over 8m47s)  kubelet            spec.containers{app}: Container image "busybox:1.36" already present on machine and can be accessed by the pod
+  Normal   Created    7m56s (x2 over 8m46s)  kubelet            spec.containers{app}: Container created
+  Normal   Started    7m56s (x2 over 8m46s)  kubelet            spec.containers{app}: Container started
+  Warning  Unhealthy  7m40s (x3 over 8m29s)  kubelet            spec.containers{app}: Liveness probe failed:
+
+$ kubectl describe pod life-startup -n s10 | sed -n "/Events:/,\$p"; kubectl logs life-startup -n s10; kubectl get pod life-startup -n s10
+Events:
+  Type     Reason     Age                    From               Message
+  ----     ------     ----                   ----               -------
+  Normal   Scheduled  8m47s                  default-scheduler  Successfully assigned s10/life-startup to devops-lab
+  Normal   Pulled     8m47s                  kubelet            spec.containers{slow-app}: Container image "busybox:1.36" already present on machine and can be accessed by the pod
+  Normal   Created    8m47s                  kubelet            spec.containers{slow-app}: Container created
+  Normal   Started    8m46s                  kubelet            spec.containers{slow-app}: Container started
+  Warning  Unhealthy  8m22s (x5 over 8m42s)  kubelet            spec.containers{slow-app}: Startup probe failed:
+slow start...
+started
+NAME           READY   STATUS    RESTARTS   AGE
+life-startup   1/1     Running   0          68s
+
+$ kubectl logs life-init -n s10 -c wait-a-bit; kubectl get pod life-init -n s10 -o jsonpath="init exit: {.status.initContainerStatuses[0].state.terminated.reason}{\"
+\"}"; kubectl exec -n s10 life-init -c web -- wget -qO- localhost
+init: preparing files
+init exit: Completed
+<h1>made by init container</h1>
+
+$ kubectl get pod life-multi -n s10 -o jsonpath="{range .status.containerStatuses[*]}{.name} ready={.ready}{\"
+\"}{end}"; kubectl exec -n s10 life-multi -c web -- wget -qO- localhost >/dev/null; sleep 1; kubectl logs life-multi -n s10 -c log-reader
+log-reader ready=true
+web ready=true
+::1 - - [16/Oct/2026:18:01:49 +0000] "GET / HTTP/1.1" 200 615 "-" "Wget" "-"
+
+$ date +%T; kubectl delete pod life-termination -n s10; date +%T
+20:09:31
+pod "life-termination" deleted from s10 namespace
+20:09:36
+
+$ kubectl logs -f life-termination -n s10   # was following the log while the pod was deleted
+app running
+got SIGTERM, cleaning up
+cleanup done
+

@@ -1,0 +1,185 @@
+$ kubectl apply -f 01-rolling-update/deployment-v1.yaml -f 01-rolling-update/service.yaml && kubectl rollout status deploy/web-rolling -n s10 --timeout=120s
+deployment.apps/web-rolling created
+service/web-rolling created
+Waiting for deployment "web-rolling" rollout to finish: 0 of 4 updated replicas are available...
+Waiting for deployment "web-rolling" rollout to finish: 0 of 4 updated replicas are available...
+Waiting for deployment "web-rolling" rollout to finish: 0 of 4 updated replicas are available...
+Waiting for deployment "web-rolling" rollout to finish: 0 of 4 updated replicas are available...
+Waiting for deployment "web-rolling" rollout to finish: 2 of 4 updated replicas are available...
+Waiting for deployment "web-rolling" rollout to finish: 2 of 4 updated replicas are available...
+Waiting for deployment "web-rolling" rollout to finish: 3 of 4 updated replicas are available...
+deployment "web-rolling" successfully rolled out
+
+$ kubectl get deploy,rs,pods -n s10 -l app=web-rolling
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/web-rolling-549b5898c9   4         4         4       12s
+
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/web-rolling-549b5898c9-66mx2   1/1     Running   0          12s
+pod/web-rolling-549b5898c9-7kd47   1/1     Running   0          12s
+pod/web-rolling-549b5898c9-q6r28   1/1     Running   0          12s
+pod/web-rolling-549b5898c9-xhjfl   1/1     Running   0          12s
+
+$ kubectl run client -n s10 --image=curlimages/curl:8.11.1 --restart=Never --command -- sleep 3600 && kubectl wait -n s10 --for=condition=Ready pod/client --timeout=90s
+pod/client created
+pod/client condition met
+
+$ kubectl exec -n s10 client -- sh -c "for i in 1 2 3; do curl -s web-rolling; done"
+rolling update - version 1
+rolling update - version 1
+rolling update - version 1
+
+$ kubectl apply -f 01-rolling-update/deployment-v2.yaml && kubectl rollout status deploy/web-rolling -n s10 --timeout=180s
+deployment.apps/web-rolling configured
+Waiting for deployment "web-rolling" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web-rolling" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web-rolling" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web-rolling" rollout to finish: 1 old replicas are pending termination...
+deployment "web-rolling" successfully rolled out
+
+$ kubectl get pods -n s10 -l app=web-rolling -w --output-watch-events   # running in background during the update
+EVENT      NAME                           READY   STATUS    RESTARTS   AGE
+ADDED      web-rolling-549b5898c9-66mx2   1/1     Running   0          12s
+ADDED      web-rolling-549b5898c9-7kd47   1/1     Running   0          12s
+ADDED      web-rolling-549b5898c9-q6r28   1/1     Running   0          12s
+ADDED      web-rolling-549b5898c9-xhjfl   1/1     Running   0          12s
+ADDED      web-rolling-764cfb56d-hf42g    0/1     Pending   0          0s
+MODIFIED   web-rolling-764cfb56d-hf42g    0/1     Pending   0          0s
+MODIFIED   web-rolling-764cfb56d-hf42g    0/1     ContainerCreating   0          0s
+MODIFIED   web-rolling-764cfb56d-hf42g    0/1     ContainerCreating   0          1s
+MODIFIED   web-rolling-764cfb56d-hf42g    0/1     Running             0          1s
+MODIFIED   web-rolling-764cfb56d-hf42g    1/1     Running             0          1s
+MODIFIED   web-rolling-764cfb56d-hf42g    1/1     Running             0          3s
+MODIFIED   web-rolling-549b5898c9-q6r28   1/1     Terminating         0          18s
+MODIFIED   web-rolling-549b5898c9-q6r28   1/1     Terminating         0          18s
+ADDED      web-rolling-764cfb56d-xm7cj    0/1     Pending             0          0s
+MODIFIED   web-rolling-764cfb56d-xm7cj    0/1     Pending             0          0s
+MODIFIED   web-rolling-764cfb56d-xm7cj    0/1     ContainerCreating   0          0s
+MODIFIED   web-rolling-549b5898c9-q6r28   0/1     Error               0          18s
+MODIFIED   web-rolling-549b5898c9-q6r28   0/1     Error               0          18s
+DELETED    web-rolling-549b5898c9-q6r28   0/1     Error               0          18s
+MODIFIED   web-rolling-764cfb56d-xm7cj    0/1     ContainerCreating   0          0s
+MODIFIED   web-rolling-764cfb56d-xm7cj    0/1     Running             0          0s
+MODIFIED   web-rolling-764cfb56d-xm7cj    1/1     Running             0          1s
+MODIFIED   web-rolling-764cfb56d-xm7cj    1/1     Running             0          2s
+MODIFIED   web-rolling-549b5898c9-66mx2   1/1     Terminating         0          22s
+MODIFIED   web-rolling-549b5898c9-66mx2   1/1     Terminating         0          22s
+ADDED      web-rolling-764cfb56d-vrxvv    0/1     Pending             0          0s
+MODIFIED   web-rolling-764cfb56d-vrxvv    0/1     Pending             0          0s
+MODIFIED   web-rolling-764cfb56d-vrxvv    0/1     ContainerCreating   0          0s
+MODIFIED   web-rolling-549b5898c9-66mx2   0/1     Error               0          22s
+MODIFIED   web-rolling-549b5898c9-66mx2   0/1     Error               0          22s
+DELETED    web-rolling-549b5898c9-66mx2   0/1     Error               0          22s
+MODIFIED   web-rolling-764cfb56d-vrxvv    0/1     ContainerCreating   0          0s
+MODIFIED   web-rolling-764cfb56d-vrxvv    0/1     Running             0          0s
+MODIFIED   web-rolling-764cfb56d-vrxvv    1/1     Running             0          0s
+MODIFIED   web-rolling-549b5898c9-7kd47   1/1     Terminating         0          25s
+MODIFIED   web-rolling-549b5898c9-7kd47   1/1     Terminating         0          25s
+ADDED      web-rolling-764cfb56d-z2tjp    0/1     Pending             0          0s
+MODIFIED   web-rolling-764cfb56d-z2tjp    0/1     Pending             0          0s
+MODIFIED   web-rolling-764cfb56d-z2tjp    0/1     ContainerCreating   0          0s
+MODIFIED   web-rolling-549b5898c9-7kd47   0/1     Error               0          25s
+MODIFIED   web-rolling-549b5898c9-7kd47   0/1     Error               0          25s
+DELETED    web-rolling-549b5898c9-7kd47   0/1     Error               0          25s
+MODIFIED   web-rolling-764cfb56d-z2tjp    0/1     ContainerCreating   0          0s
+MODIFIED   web-rolling-764cfb56d-z2tjp    0/1     Running             0          0s
+MODIFIED   web-rolling-764cfb56d-z2tjp    1/1     Running             0          1s
+MODIFIED   web-rolling-764cfb56d-z2tjp    1/1     Running             0          2s
+MODIFIED   web-rolling-549b5898c9-xhjfl   1/1     Terminating         0          29s
+MODIFIED   web-rolling-549b5898c9-xhjfl   1/1     Terminating         0          29s
+MODIFIED   web-rolling-549b5898c9-xhjfl   0/1     Error               0          29s
+MODIFIED   web-rolling-549b5898c9-xhjfl   0/1     Error               0          29s
+DELETED    web-rolling-549b5898c9-xhjfl   0/1     Error               0          29s
+
+# curl loop running during the update (one request every 0.5s)
+17:47:18 rolling update - version 1
+17:47:19 rolling update - version 1
+17:47:19 rolling update - version 1
+17:47:20 rolling update - version 1
+17:47:20 rolling update - version 1
+17:47:21 rolling update - version 1
+17:47:21 rolling update - version 1
+17:47:22 rolling update - version 1
+17:47:22 rolling update - version 1
+17:47:23 rolling update - version 1
+17:47:23 rolling update - version 1
+17:47:24 rolling update - version 1
+17:47:24 rolling update - version 1
+17:47:25 rolling update - version 1
+17:47:25 rolling update - version 1
+17:47:26 rolling update - version 1
+17:47:26 rolling update - version 2
+17:47:27 rolling update - version 2
+17:47:27 rolling update - version 2
+17:47:28 rolling update - version 2
+17:47:28 rolling update - version 2
+17:47:29 rolling update - version 1
+17:47:29 rolling update - version 2
+17:47:30 rolling update - version 2
+17:47:30 rolling update - version 1
+17:47:31 rolling update - version 2
+17:47:31 rolling update - version 2
+17:47:32 rolling update - version 2
+17:47:32 rolling update - version 1
+17:47:33 rolling update - version 2
+17:47:33 rolling update - version 2
+17:47:34 rolling update - version 2
+17:47:34 rolling update - version 2
+17:47:35 rolling update - version 2
+17:47:35 rolling update - version 2
+17:47:36 rolling update - version 2
+17:47:36 rolling update - version 2
+17:47:37 rolling update - version 2
+17:47:37 rolling update - version 2
+17:47:38 rolling update - version 2
+
+$ kubectl get rs -n s10 -l app=web-rolling
+NAME                     DESIRED   CURRENT   READY   AGE
+web-rolling-549b5898c9   0         0         0       33s
+web-rolling-764cfb56d    4         4         4       19s
+
+$ kubectl rollout history deploy/web-rolling -n s10
+deployment.apps/web-rolling 
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+
+
+$ kubectl rollout undo deploy/web-rolling -n s10 && kubectl rollout status deploy/web-rolling -n s10 --timeout=180s && kubectl exec -n s10 client -- curl -s web-rolling
+Warning: resource deployments/web-rolling was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/web-rolling rolled back
+Waiting for deployment "web-rolling" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 1 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "web-rolling" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web-rolling" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web-rolling" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "web-rolling" rollout to finish: 1 old replicas are pending termination...
+deployment "web-rolling" successfully rolled out
+rolling update - version 1
+

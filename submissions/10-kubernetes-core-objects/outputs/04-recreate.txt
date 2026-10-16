@@ -1,0 +1,187 @@
+$ kubectl apply -f 04-recreate/ && kubectl rollout status deploy/web-recreate -n s10
+deployment.apps/web-recreate created
+deployment.apps/web-recreate configured
+service/web-recreate created
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "web-recreate" rollout to finish: 1 of 3 updated replicas are available...
+Waiting for deployment "web-recreate" rollout to finish: 2 of 3 updated replicas are available...
+deployment "web-recreate" successfully rolled out
+
+$ kubectl get pods -n s10 -l app=web-recreate
+NAME                           READY   STATUS    RESTARTS   AGE
+web-recreate-9cf5767c9-4hmdw   1/1     Running   0          1s
+web-recreate-9cf5767c9-blvws   1/1     Running   0          1s
+web-recreate-9cf5767c9-mfrv9   1/1     Running   0          1s
+
+$ kubectl apply -f 04-recreate/deployment-v2.yaml && kubectl rollout status deploy/web-recreate -n s10
+deployment.apps/web-recreate unchanged
+deployment "web-recreate" successfully rolled out
+
+$ kubectl get pods -n s10 -l app=web-recreate -w --output-watch-events   # running in background during the update
+EVENT      NAME                           READY   STATUS    RESTARTS   AGE
+ADDED      web-recreate-9cf5767c9-4hmdw   1/1     Running   0          1s
+ADDED      web-recreate-9cf5767c9-blvws   1/1     Running   0          1s
+ADDED      web-recreate-9cf5767c9-mfrv9   1/1     Running   0          1s
+MODIFIED   web-recreate-9cf5767c9-blvws   1/1     Running   0          2s
+
+# curl loop running during the update
+17:48:19 NO RESPONSE
+17:48:20 NO RESPONSE
+17:48:20 recreate - version 2
+17:48:21 recreate - version 2
+17:48:21 recreate - version 2
+17:48:22 recreate - version 2
+17:48:22 recreate - version 2
+17:48:23 recreate - version 2
+17:48:23 recreate - version 2
+17:48:24 recreate - version 2
+17:48:24 recreate - version 2
+17:48:25 recreate - version 2
+17:48:25 recreate - version 2
+17:48:26 recreate - version 2
+17:48:26 recreate - version 2
+17:48:27 recreate - version 2
+17:48:27 recreate - version 2
+17:48:28 recreate - version 2
+17:48:28 recreate - version 2
+17:48:29 recreate - version 2
+17:48:29 recreate - version 2
+17:48:30 recreate - version 2
+17:48:30 recreate - version 2
+17:48:31 recreate - version 2
+17:48:31 recreate - version 2
+17:48:32 recreate - version 2
+17:48:32 recreate - version 2
+17:48:33 recreate - version 2
+17:48:33 recreate - version 2
+17:48:34 recreate - version 2
+
+$ kubectl get pods,rs -n s10 -l app=web-recreate
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/web-recreate-9cf5767c9-4hmdw   1/1     Running   0          16s
+pod/web-recreate-9cf5767c9-blvws   1/1     Running   0          16s
+pod/web-recreate-9cf5767c9-mfrv9   1/1     Running   0          16s
+
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/web-recreate-6845d79c6   0         0         0       18s
+replicaset.apps/web-recreate-9cf5767c9   3         3         3       16s
+
+# ---- Retry: my first try applied the whole folder, so v1 and v2 were applied together and it went straight to v2. Starting again with only v1. ----
+$ kubectl delete deploy web-recreate -n s10 --wait=true && kubectl apply -f 04-recreate/deployment-v1.yaml && kubectl rollout status deploy/web-recreate -n s10 && kubectl exec -n s10 client -- curl -s web-recreate
+deployment.apps "web-recreate" deleted from s10 namespace
+deployment.apps/web-recreate created
+Waiting for deployment "web-recreate" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "web-recreate" rollout to finish: 1 of 3 updated replicas are available...
+Waiting for deployment "web-recreate" rollout to finish: 2 of 3 updated replicas are available...
+deployment "web-recreate" successfully rolled out
+recreate - version 1
+
+$ kubectl get pods -n s10 -l app=web-recreate
+NAME                           READY   STATUS    RESTARTS   AGE
+web-recreate-6845d79c6-6dgws   1/1     Running   0          1s
+web-recreate-6845d79c6-frbw4   1/1     Running   0          1s
+web-recreate-6845d79c6-vx7wc   1/1     Running   0          1s
+
+$ kubectl apply -f 04-recreate/deployment-v2.yaml && kubectl rollout status deploy/web-recreate -n s10
+deployment.apps/web-recreate configured
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 out of 3 new replicas have been updated...
+Waiting for deployment "web-recreate" rollout to finish: 0 of 3 updated replicas are available...
+Waiting for deployment "web-recreate" rollout to finish: 1 of 3 updated replicas are available...
+Waiting for deployment "web-recreate" rollout to finish: 2 of 3 updated replicas are available...
+deployment "web-recreate" successfully rolled out
+
+$ kubectl get pods -n s10 -l app=web-recreate -w --output-watch-events   # running in background during the update
+EVENT      NAME                           READY   STATUS    RESTARTS   AGE
+ADDED      web-recreate-6845d79c6-6dgws   1/1     Running   0          2s
+ADDED      web-recreate-6845d79c6-frbw4   1/1     Running   0          2s
+ADDED      web-recreate-6845d79c6-vx7wc   1/1     Running   0          2s
+MODIFIED   web-recreate-6845d79c6-frbw4   1/1     Running   0          2s
+MODIFIED   web-recreate-6845d79c6-vx7wc   1/1     Running   0          3s
+MODIFIED   web-recreate-6845d79c6-frbw4   1/1     Terminating   0          4s
+MODIFIED   web-recreate-6845d79c6-6dgws   1/1     Terminating   0          4s
+MODIFIED   web-recreate-6845d79c6-vx7wc   1/1     Terminating   0          4s
+MODIFIED   web-recreate-6845d79c6-frbw4   1/1     Terminating   0          4s
+MODIFIED   web-recreate-6845d79c6-6dgws   1/1     Terminating   0          4s
+MODIFIED   web-recreate-6845d79c6-6dgws   0/1     Error         0          4s
+MODIFIED   web-recreate-6845d79c6-frbw4   0/1     Error         0          4s
+MODIFIED   web-recreate-6845d79c6-frbw4   0/1     Error         0          4s
+MODIFIED   web-recreate-6845d79c6-frbw4   0/1     Error         0          4s
+DELETED    web-recreate-6845d79c6-frbw4   0/1     Error         0          4s
+MODIFIED   web-recreate-6845d79c6-vx7wc   1/1     Terminating   0          4s
+MODIFIED   web-recreate-6845d79c6-6dgws   0/1     Error         0          4s
+MODIFIED   web-recreate-6845d79c6-6dgws   0/1     Error         0          4s
+DELETED    web-recreate-6845d79c6-6dgws   0/1     Error         0          4s
+MODIFIED   web-recreate-6845d79c6-vx7wc   0/1     Error         0          4s
+ADDED      web-recreate-9cf5767c9-69sg5   0/1     Pending       0          0s
+ADDED      web-recreate-9cf5767c9-6vpgg   0/1     Pending       0          0s
+ADDED      web-recreate-9cf5767c9-v6rqx   0/1     Pending       0          0s
+MODIFIED   web-recreate-9cf5767c9-69sg5   0/1     Pending       0          0s
+MODIFIED   web-recreate-9cf5767c9-6vpgg   0/1     Pending       0          0s
+MODIFIED   web-recreate-9cf5767c9-v6rqx   0/1     Pending       0          0s
+MODIFIED   web-recreate-9cf5767c9-69sg5   0/1     ContainerCreating   0          0s
+MODIFIED   web-recreate-9cf5767c9-v6rqx   0/1     ContainerCreating   0          0s
+MODIFIED   web-recreate-9cf5767c9-6vpgg   0/1     ContainerCreating   0          0s
+MODIFIED   web-recreate-9cf5767c9-v6rqx   0/1     ContainerCreating   0          1s
+MODIFIED   web-recreate-9cf5767c9-6vpgg   0/1     ContainerCreating   0          1s
+MODIFIED   web-recreate-9cf5767c9-69sg5   0/1     ContainerCreating   0          1s
+MODIFIED   web-recreate-9cf5767c9-6vpgg   0/1     Running             0          1s
+MODIFIED   web-recreate-9cf5767c9-6vpgg   1/1     Running             0          1s
+MODIFIED   web-recreate-9cf5767c9-v6rqx   0/1     Running             0          1s
+MODIFIED   web-recreate-9cf5767c9-v6rqx   1/1     Running             0          1s
+MODIFIED   web-recreate-9cf5767c9-69sg5   0/1     Running             0          1s
+MODIFIED   web-recreate-9cf5767c9-69sg5   1/1     Running             0          1s
+MODIFIED   web-recreate-6845d79c6-vx7wc   0/1     Error               0          5s
+DELETED    web-recreate-6845d79c6-vx7wc   0/1     Error               0          5s
+MODIFIED   web-recreate-9cf5767c9-69sg5   1/1     Running             0          2s
+
+# curl loop running during the update
+17:49:10 recreate - version 1
+17:49:10 recreate - version 1
+17:49:11 recreate - version 1
+17:49:11 recreate - version 1
+17:49:12 recreate - version 1
+17:49:12 NO RESPONSE
+17:49:14 NO RESPONSE
+17:49:14 recreate - version 2
+17:49:15 recreate - version 2
+17:49:15 recreate - version 2
+17:49:16 recreate - version 2
+17:49:16 recreate - version 2
+17:49:17 recreate - version 2
+17:49:17 recreate - version 2
+17:49:18 recreate - version 2
+17:49:18 recreate - version 2
+17:49:19 recreate - version 2
+17:49:19 recreate - version 2
+17:49:20 recreate - version 2
+17:49:20 recreate - version 2
+17:49:21 recreate - version 2
+17:49:21 recreate - version 2
+17:49:22 recreate - version 2
+17:49:22 recreate - version 2
+17:49:23 recreate - version 2
+17:49:23 recreate - version 2
+17:49:24 recreate - version 2
+17:49:24 recreate - version 2
+17:49:25 recreate - version 2
+17:49:25 recreate - version 2
+
+$ kubectl get pods,rs -n s10 -l app=web-recreate
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/web-recreate-9cf5767c9-69sg5   1/1     Running   0          14s
+pod/web-recreate-9cf5767c9-6vpgg   1/1     Running   0          14s
+pod/web-recreate-9cf5767c9-v6rqx   1/1     Running   0          14s
+
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/web-recreate-6845d79c6   0         0         0       18s
+replicaset.apps/web-recreate-9cf5767c9   3         3         3       14s
+
