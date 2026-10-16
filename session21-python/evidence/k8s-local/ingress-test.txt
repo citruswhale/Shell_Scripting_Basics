@@ -1,0 +1,51 @@
+# GearLoan ingress test - 2026-10-16T19:34:37Z
+# kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8090:80
+# H='Host: gearloan.local'   B=http://127.0.0.1:8090   (ID/LID = ids returned by the POSTs)
+
+$ kubectl get ingress -n gearloan
+NAME       CLASS   HOSTS            ADDRESS        PORTS   AGE
+gearloan   nginx   gearloan.local   192.168.49.2   80      18s
+
+
+$ curl -s -o /dev/null -w '%{http_code} %{content_type}' -H "Host: gearloan.local" http://127.0.0.1:8090/
+200 text/html
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8090/ | grep -o '<title>.*</title>'
+<title>GearLoan</title>
+
+$ curl -s -o /dev/null -w '%{http_code} %{content_type}' -H "Host: gearloan.local" http://127.0.0.1:8090/loans   (SPA route falls back to index.html)
+200 text/html
+
+$ curl -s -H "$H" $B/api/health
+{"status":"ok"}
+
+$ curl -s -H "$H" $B/api/ready
+{"status":"ready"}
+
+$ curl -s -H "$H" $B/api/info
+{"name":"GearLoan","version":"1.0.0"}
+
+$ curl -s -X POST -H "Host: gearloan.local" -H 'Content-Type: application/json' http://127.0.0.1:8090/api/items -d '{"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001"}'
+{"id":1,"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:34:37.638244Z","updated_at":"2026-10-16T19:34:37.638244Z"}
+
+$ curl -s -H "$H" $B/api/items
+[{"id":1,"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:34:37.638244Z","updated_at":"2026-10-16T19:34:37.638244Z"}]
+
+$ curl -s -X POST -H "Host: gearloan.local" -H 'Content-Type: application/json' http://127.0.0.1:8090/api/loans -d '{"item_id":1,"borrower_name":"Asha Rao","borrower_email":"asha@example.com","due_date":"2026-10-23"}'
+{"id":1,"item_id":1,"item_name":"Canon EOS R50","borrower_name":"Asha Rao","borrower_email":"asha@example.com","loaned_at":"2026-10-16T19:34:37.696528Z","due_date":"2026-10-23","returned_at":null,"return_condition":null,"status":"active"}
+
+$ curl -s -H "$H" $B/api/items/$ID
+{"id":1,"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001","condition":"good","status":"on_loan","notes":null,"created_at":"2026-10-16T19:34:37.638244Z","updated_at":"2026-10-16T19:34:37.696528Z"}
+
+$ curl -s -X POST -H "$H" -H 'Content-Type: application/json' $B/api/loans/$LID/return -d '{"condition":"good"}'
+{"id":1,"item_id":1,"item_name":"Canon EOS R50","borrower_name":"Asha Rao","borrower_email":"asha@example.com","loaned_at":"2026-10-16T19:34:37.696528Z","due_date":"2026-10-23","returned_at":"2026-10-16T19:34:37.747124Z","return_condition":"good","status":"returned"}
+
+$ curl -s -H "$H" $B/api/items/$ID
+{"id":1,"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:34:37.638244Z","updated_at":"2026-10-16T19:34:37.745662Z"}
+
+$ curl -s -H "$H" $B/api/stats
+{"items_total":1,"available":1,"on_loan":0,"maintenance":0,"active_loans":0,"overdue_loans":0}
+
+# The frontend nginx also proxies /api to the backend service inside the cluster
+$ kubectl exec -n gearloan deploy/gearloan-frontend -- wget -qO- http://127.0.0.1:8080/api/info
+{"name":"GearLoan","version":"1.0.0"}

@@ -1,0 +1,48 @@
+# GearLoan persistence test - 2026-10-16T19:34:37Z
+
+## 1. Data before any restart
+$ kubectl get pvc -n gearloan
+NAME                       STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-gearloan-postgres-0   Bound    pvc-285409ba-dce9-4c91-91af-a6c3981baa22   1Gi        RWO            standard       <unset>                 18s
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8090/api/items
+[{"id":1,"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:34:37.638244Z","updated_at":"2026-10-16T19:34:37.745662Z"}]
+
+## 2. Delete one backend pod
+$ kubectl delete pod -n gearloan gearloan-backend-5f85cbccf7-j8h55
+pod "gearloan-backend-5f85cbccf7-j8h55" deleted from gearloan namespace
+$ kubectl rollout status deploy/gearloan-backend -n gearloan
+Waiting for deployment "gearloan-backend" rollout to finish: 1 of 2 updated replicas are available...
+deployment "gearloan-backend" successfully rolled out
+$ kubectl get pods -n gearloan -l app.kubernetes.io/component=backend
+NAME                                READY   STATUS    RESTARTS   AGE
+gearloan-backend-5f85cbccf7-jlk9c   1/1     Running   0          5s
+gearloan-backend-5f85cbccf7-kn99q   1/1     Running   0          23s
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8090/api/items
+[{"id":1,"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:34:37.638244Z","updated_at":"2026-10-16T19:34:37.745662Z"}]
+
+## 3. Delete the postgres pod (the PVC stays, the StatefulSet re-attaches it)
+$ kubectl delete pod -n gearloan gearloan-postgres-0
+pod "gearloan-postgres-0" deleted from gearloan namespace
+$ kubectl wait --for=condition=Ready pod/gearloan-postgres-0 -n gearloan --timeout=180s
+pod/gearloan-postgres-0 condition met
+pod uid before: e0e43e01-60c3-4c43-9c66-5bf50316e7bd
+pod uid after:  12001a00-d024-4a84-a0c5-6d605dc417a5
+
+$ kubectl get pods,pvc -n gearloan -l app.kubernetes.io/component=postgres
+NAME                      READY   STATUS    RESTARTS   AGE
+pod/gearloan-postgres-0   1/1     Running   0          6s
+
+NAME                                             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-gearloan-postgres-0   Bound    pvc-285409ba-dce9-4c91-91af-a6c3981baa22   1Gi        RWO            standard       <unset>                 29s
+
+$ kubectl logs -n gearloan gearloan-postgres-0 | grep -E 'Skipping initialization|ready to accept'
+PostgreSQL Database directory appears to contain a database; Skipping initialization
+2026-10-16 19:34:43.180 UTC [1] LOG:  database system is ready to accept connections
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8090/api/items
+[{"id":1,"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:34:37.638244Z","updated_at":"2026-10-16T19:34:37.745662Z"}]
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8090/api/loans
+[{"id":1,"item_id":1,"item_name":"Canon EOS R50","borrower_name":"Asha Rao","borrower_email":"asha@example.com","loaned_at":"2026-10-16T19:34:37.696528Z","due_date":"2026-10-23","returned_at":"2026-10-16T19:34:37.747124Z","return_condition":"good","status":"returned"}]

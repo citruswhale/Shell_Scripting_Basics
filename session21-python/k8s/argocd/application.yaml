@@ -1,0 +1,47 @@
+# Argo CD watches the Helm chart in git and keeps the cluster in sync with it.
+# kubectl apply -n argocd -f k8s/argocd/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gearloan
+  namespace: argocd
+  finalizers:
+    # Deleting the Application also deletes the app's resources
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/citruswhale/Shell_Scripting_Basics.git
+    targetRevision: master
+    path: session21-python/helm/gearloan
+    helm:
+      releaseName: gearloan
+      valueFiles:
+        - values-eks.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gearloan
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+    # Same labels as k8s/namespace.yaml if Argo CD creates the namespace
+    managedNamespaceMetadata:
+      labels:
+        app.kubernetes.io/part-of: gearloan
+        pod-security.kubernetes.io/enforce: restricted
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+  # The HPA owns the replica count, not git
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

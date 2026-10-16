@@ -1,0 +1,66 @@
+# GearLoan on minikube (profile devops-lab) - 2026-10-16T19:36:26Z
+
+$ kubectl get pods,svc,ingress,hpa,pvc -n gearloan -o wide
+NAME                                     READY   STATUS    RESTARTS   AGE    IP             NODE         NOMINATED NODE   READINESS GATES
+pod/gearloan-backend-6698f6c5d-5jmlx     1/1     Running   0          85s    10.244.0.229   devops-lab   <none>           <none>
+pod/gearloan-backend-6698f6c5d-xj845     1/1     Running   0          81s    10.244.0.230   devops-lab   <none>           <none>
+pod/gearloan-frontend-6b9fd65d88-4x56f   1/1     Running   0          2m7s   10.244.0.222   devops-lab   <none>           <none>
+pod/gearloan-frontend-6b9fd65d88-k8nft   1/1     Running   0          2m7s   10.244.0.219   devops-lab   <none>           <none>
+pod/gearloan-postgres-0                  1/1     Running   0          104s   10.244.0.228   devops-lab   <none>           <none>
+
+NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE    SELECTOR
+service/gearloan-backend    ClusterIP   10.105.208.243   <none>        8000/TCP   2m7s   app.kubernetes.io/component=backend,app.kubernetes.io/instance=gearloan,app.kubernetes.io/name=gearloan
+service/gearloan-frontend   ClusterIP   10.110.78.170    <none>        8080/TCP   2m7s   app.kubernetes.io/component=frontend,app.kubernetes.io/instance=gearloan,app.kubernetes.io/name=gearloan
+service/gearloan-postgres   ClusterIP   None             <none>        5432/TCP   2m7s   app.kubernetes.io/component=postgres,app.kubernetes.io/instance=gearloan,app.kubernetes.io/name=gearloan
+
+NAME                                 CLASS   HOSTS            ADDRESS        PORTS   AGE
+ingress.networking.k8s.io/gearloan   nginx   gearloan.local   192.168.49.2   80      2m7s
+
+NAME                                                    REFERENCE                      TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/gearloan-backend    Deployment/gearloan-backend    cpu: 3%/70%   2         5         2          2m7s
+horizontalpodautoscaler.autoscaling/gearloan-frontend   Deployment/gearloan-frontend   cpu: 2%/70%   2         5         2          2m7s
+
+NAME                                             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE    VOLUMEMODE
+persistentvolumeclaim/data-gearloan-postgres-0   Bound    pvc-285409ba-dce9-4c91-91af-a6c3981baa22   1Gi        RWO            standard       <unset>                 2m7s   Filesystem
+
+$ kubectl get deploy,statefulset,configmap,secret,serviceaccount -n gearloan
+NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gearloan-backend    2/2     2            2           2m7s
+deployment.apps/gearloan-frontend   2/2     2            2           2m7s
+
+NAME                                 READY   AGE
+statefulset.apps/gearloan-postgres   1/1     2m7s
+
+NAME                         DATA   AGE
+configmap/gearloan-backend   6      2m7s
+configmap/kube-root-ca.crt   1      4m22s
+
+NAME                                    TYPE                 DATA   AGE
+secret/gearloan-db                      Opaque               1      2m7s
+secret/sh.helm.release.v1.gearloan.v1   helm.sh/release.v1   1      2m7s
+secret/sh.helm.release.v1.gearloan.v2   helm.sh/release.v1   1      85s
+
+NAME                      AGE
+serviceaccount/default    4m22s
+serviceaccount/gearloan   2m7s
+
+$ kubectl get ns gearloan --show-labels
+NAME       STATUS   AGE     LABELS
+gearloan   Active   4m22s   app.kubernetes.io/part-of=gearloan,environment=dev,kubernetes.io/metadata.name=gearloan,pod-security.kubernetes.io/audit=restricted,pod-security.kubernetes.io/enforce-version=latest,pod-security.kubernetes.io/enforce=restricted,pod-security.kubernetes.io/warn=restricted
+
+$ kubectl top pods -n gearloan
+NAME                                 CPU(cores)   MEMORY(bytes)   
+gearloan-backend-6698f6c5d-5jmlx     3m           65Mi            
+gearloan-backend-6698f6c5d-xj845     3m           64Mi            
+gearloan-frontend-6b9fd65d88-4x56f   1m           8Mi             
+gearloan-frontend-6b9fd65d88-k8nft   1m           8Mi             
+gearloan-postgres-0                  7m           26Mi            
+
+# Containers run as non-root with a read-only root filesystem
+$ kubectl get pods -n gearloan -o 'custom-columns=POD:.metadata.name,RUN_AS_USER:.spec.securityContext.runAsUser,NON_ROOT:.spec.securityContext.runAsNonRoot,READONLY_FS:.spec.containers[0].securityContext.readOnlyRootFilesystem,CPU_REQ:.spec.containers[0].resources.requests.cpu,MEM_LIM:.spec.containers[0].resources.limits.memory'
+POD                                  RUN_AS_USER   NON_ROOT   READONLY_FS   CPU_REQ   MEM_LIM
+gearloan-backend-6698f6c5d-5jmlx     10001         true       true          100m      512Mi
+gearloan-backend-6698f6c5d-xj845     10001         true       true          100m      512Mi
+gearloan-frontend-6b9fd65d88-4x56f   101           true       true          50m       128Mi
+gearloan-frontend-6b9fd65d88-k8nft   101           true       true          50m       128Mi
+gearloan-postgres-0                  70            true       true          100m      512Mi

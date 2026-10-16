@@ -1,0 +1,14 @@
+# Namespace for the GearLoan app.
+# Pod Security "restricted" makes the API server reject any pod that runs as
+# root, keeps capabilities or allows privilege escalation.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gearloan
+  labels:
+    app.kubernetes.io/part-of: gearloan
+    environment: dev
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

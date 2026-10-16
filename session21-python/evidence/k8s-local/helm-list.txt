@@ -1,0 +1,56 @@
+# GearLoan helm install / upgrade - 2026-10-16T19:35:01Z
+
+## Install (revision 1)
+$ helm lint helm/gearloan -f helm/gearloan/values-local.yaml
+==> Linting helm/gearloan
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+
+$ kubectl apply -f k8s/namespace.yaml
+namespace/gearloan unchanged
+
+$ export PGPW=$(openssl rand -hex 16)
+$ helm upgrade --install gearloan helm/gearloan -n gearloan -f helm/gearloan/values-local.yaml --set postgres.password="$PGPW" --wait --timeout 5m
+Release "gearloan" does not exist. Installing it now.
+NAME: gearloan
+LAST DEPLOYED: Fri Oct 16 21:34:19 2026
+NAMESPACE: gearloan
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8090/api/info
+{"name":"GearLoan","version":"1.0.0"}
+
+## Upgrade with a changed value (revision 2)
+$ helm upgrade --install gearloan helm/gearloan -n gearloan -f helm/gearloan/values-local.yaml --set backend.appVersion=1.0.1 --wait --timeout 5m
+# (no password passed: the chart reads the existing Secret with lookup, so it stays the same)
+Release "gearloan" has been upgraded. Happy Helming!
+NAME: gearloan
+LAST DEPLOYED: Fri Oct 16 21:35:01 2026
+NAMESPACE: gearloan
+STATUS: deployed
+REVISION: 2
+DESCRIPTION: Upgrade complete
+
+password hash before: a815e6e044de   after: a815e6e044de
+
+$ kubectl rollout status deploy/gearloan-backend -n gearloan
+deployment "gearloan-backend" successfully rolled out
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8090/api/info
+{"name":"GearLoan","version":"1.0.1"}
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8090/api/items   (data still there after the upgrade)
+[{"id":1,"name":"Canon EOS R50","category":"camera","serial_number":"K8S-001","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:34:37.638244Z","updated_at":"2026-10-16T19:34:37.745662Z"}]
+
+$ helm list -n gearloan
+NAME    	NAMESPACE	REVISION	UPDATED                              	STATUS  	CHART         	APP VERSION
+gearloan	gearloan 	2       	2026-10-16 21:35:01.650282 +0200 CEST	deployed	gearloan-0.1.0	1.0.0      
+
+$ helm history gearloan -n gearloan
+REVISION	UPDATED                 	STATUS    	CHART         	APP VERSION	DESCRIPTION     
+1       	Fri Oct 16 21:34:19 2026	superseded	gearloan-0.1.0	1.0.0      	Install complete
+2       	Fri Oct 16 21:35:01 2026	deployed  	gearloan-0.1.0	1.0.0      	Upgrade complete
