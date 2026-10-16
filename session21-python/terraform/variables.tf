@@ -35,9 +35,9 @@ variable "public_subnet_cidrs" {
 }
 
 variable "node_instance_type" {
-  description = "Instance type for the worker nodes"
+  description = "Instance type for the worker nodes (x86). The AWS Free plan only allows free-tier types, so m7i-flex.large (2 vCPU, 8 GiB) instead of t3.medium"
   type        = string
-  default     = "t3.medium"
+  default     = "m7i-flex.large"
 }
 
 variable "node_min_size" {

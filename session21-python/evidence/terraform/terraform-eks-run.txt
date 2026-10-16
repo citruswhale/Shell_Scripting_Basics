@@ -1,0 +1,302 @@
+$ terraform fmt -check -recursive
+fmt: nothing to change
+
+$ terraform validate -no-color
+Success! The configuration is valid.
+
+
+$ terraform plan -no-color -out=tfplan   # 2026-10-16 23:40 CEST
+module.eks.module.eks_managed_node_group["default"].data.aws_iam_policy_document.assume_role_policy[0]: Reading...
+data.aws_availability_zones.available: Reading...
+module.eks.data.aws_iam_policy_document.assume_role_policy[0]: Reading...
+data.aws_iam_policy_document.ebs_csi_assume: Reading...
+module.eks.data.aws_caller_identity.current[0]: Reading...
+module.eks.data.aws_partition.current[0]: Reading...
+module.vpc.aws_vpc.this[0]: Refreshing state... [id=vpc-0dacaeed889bf7dd8]
+module.eks.data.aws_partition.current[0]: Read complete after 0s [id=aws]
+data.aws_iam_policy_document.ebs_csi_assume: Read complete after 0s [id=819195744]
+module.eks.module.eks_managed_node_group["default"].data.aws_iam_policy_document.assume_role_policy[0]: Read complete after 0s [id=2560088296]
+module.eks.data.aws_iam_policy_document.assume_role_policy[0]: Read complete after 0s [id=2830595799]
+aws_iam_role.ebs_csi: Refreshing state... [id=gearloan-eks-ebs-csi]
+module.eks.module.eks_managed_node_group["default"].aws_iam_role.this[0]: Refreshing state... [id=default-eks-node-group-fe8030798e8e499b69758f2993]
+module.eks.aws_iam_role.this[0]: Refreshing state... [id=gearloan-eks-cluster-76c1b58eba74526a55da3c8061]
+module.eks.data.aws_caller_identity.current[0]: Read complete after 0s [id=<aws-account-id>]
+module.eks.data.aws_iam_session_context.current[0]: Reading...
+module.eks.data.aws_iam_session_context.current[0]: Read complete after 0s [id=arn:aws:iam::<aws-account-id>:user/devops-lab]
+data.aws_availability_zones.available: Read complete after 1s [id=ap-south-1]
+aws_iam_role_policy_attachment.ebs_csi: Refreshing state... [id=gearloan-eks-ebs-csi/arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy]
+module.eks.module.eks_managed_node_group["default"].aws_iam_role_policy_attachment.this["AmazonEKSWorkerNodePolicy"]: Refreshing state... [id=default-eks-node-group-fe8030798e8e499b69758f2993/arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy]
+module.eks.module.eks_managed_node_group["default"].aws_iam_role_policy_attachment.this["AmazonEKS_CNI_Policy"]: Refreshing state... [id=default-eks-node-group-fe8030798e8e499b69758f2993/arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy]
+module.eks.module.eks_managed_node_group["default"].aws_iam_role_policy_attachment.this["AmazonEC2ContainerRegistryReadOnly"]: Refreshing state... [id=default-eks-node-group-fe8030798e8e499b69758f2993/arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly]
+module.eks.aws_iam_role_policy_attachment.this["AmazonEKSClusterPolicy"]: Refreshing state... [id=gearloan-eks-cluster-76c1b58eba74526a55da3c8061/arn:aws:iam::aws:policy/AmazonEKSClusterPolicy]
+module.vpc.aws_default_security_group.this[0]: Refreshing state... [id=sg-0208365f46e82648b]
+module.vpc.aws_default_route_table.default[0]: Refreshing state... [id=rtb-0afd1a6dc63e09096]
+module.vpc.aws_default_network_acl.this[0]: Refreshing state... [id=acl-0275722f529cd22dd]
+module.eks.aws_security_group.cluster[0]: Refreshing state... [id=sg-071e5f4038656dec6]
+module.vpc.aws_route_table.public[0]: Refreshing state... [id=rtb-058e08289179581ab]
+module.vpc.aws_internet_gateway.this[0]: Refreshing state... [id=igw-01ed2e6d9071a206d]
+module.vpc.aws_subnet.public[1]: Refreshing state... [id=subnet-0f511b368ebcfe1d3]
+module.vpc.aws_subnet.public[0]: Refreshing state... [id=subnet-0fa6882b0aec6d397]
+module.eks.aws_security_group.node[0]: Refreshing state... [id=sg-0e1f9b29054af2959]
+module.vpc.aws_route.public_internet_gateway[0]: Refreshing state... [id=r-rtb-058e08289179581ab1080289494]
+module.eks.aws_security_group_rule.node["egress_all"]: Refreshing state... [id=sgrule-3116932818]
+module.eks.aws_security_group_rule.node["ingress_self_coredns_udp"]: Refreshing state... [id=sgrule-4076005495]
+module.eks.aws_security_group_rule.node["ingress_nodes_ephemeral"]: Refreshing state... [id=sgrule-600364907]
+module.eks.aws_security_group_rule.node["ingress_cluster_kubelet"]: Refreshing state... [id=sgrule-1165373260]
+module.eks.aws_security_group_rule.node["ingress_self_coredns_tcp"]: Refreshing state... [id=sgrule-1454197656]
+module.eks.aws_security_group_rule.node["ingress_cluster_443"]: Refreshing state... [id=sgrule-3964437893]
+module.eks.aws_security_group_rule.node["ingress_cluster_6443_webhook"]: Refreshing state... [id=sgrule-938208101]
+module.eks.aws_security_group_rule.node["ingress_cluster_9443_webhook"]: Refreshing state... [id=sgrule-1075242127]
+module.eks.aws_security_group_rule.node["ingress_cluster_4443_webhook"]: Refreshing state... [id=sgrule-4272524531]
+module.eks.aws_security_group_rule.node["ingress_cluster_10251_webhook"]: Refreshing state... [id=sgrule-1899986743]
+module.eks.aws_security_group_rule.node["ingress_cluster_8443_webhook"]: Refreshing state... [id=sgrule-616027972]
+module.eks.aws_security_group_rule.cluster["ingress_nodes_443"]: Refreshing state... [id=sgrule-55123395]
+module.vpc.aws_route_table_association.public[1]: Refreshing state... [id=rtbassoc-02bade0353d55fb23]
+module.vpc.aws_route_table_association.public[0]: Refreshing state... [id=rtbassoc-02e7990583a908c3a]
+module.eks.aws_eks_cluster.this[0]: Refreshing state... [id=gearloan-eks]
+module.eks.data.aws_eks_addon_version.this["vpc-cni"]: Reading...
+module.eks.time_sleep.this[0]: Refreshing state... [id=2026-10-16T21:11:50Z]
+module.eks.aws_eks_access_entry.this["cluster_creator"]: Refreshing state... [id=gearloan-eks:arn:aws:iam::<aws-account-id>:user/devops-lab]
+module.eks.data.aws_eks_addon_version.this["coredns"]: Reading...
+module.eks.data.aws_eks_addon_version.this["kube-proxy"]: Reading...
+module.eks.data.aws_eks_addon_version.this["eks-pod-identity-agent"]: Reading...
+module.eks.data.aws_eks_addon_version.this["aws-ebs-csi-driver"]: Reading...
+module.eks.module.eks_managed_node_group["default"].module.user_data.null_resource.validate_cluster_service_cidr: Refreshing state... [id=1460322581588365494]
+module.eks.module.eks_managed_node_group["default"].data.aws_ssm_parameter.ami[0]: Reading...
+module.eks.module.eks_managed_node_group["default"].aws_launch_template.this[0]: Refreshing state... [id=lt-0cca3a285496f08af]
+module.eks.data.aws_eks_addon_version.this["eks-pod-identity-agent"]: Read complete after 0s [id=eks-pod-identity-agent]
+module.eks.data.aws_eks_addon_version.this["vpc-cni"]: Read complete after 0s [id=vpc-cni]
+module.eks.data.aws_eks_addon_version.this["aws-ebs-csi-driver"]: Read complete after 0s [id=aws-ebs-csi-driver]
+module.eks.data.aws_eks_addon_version.this["coredns"]: Read complete after 0s [id=coredns]
+module.eks.data.aws_eks_addon_version.this["kube-proxy"]: Read complete after 0s [id=kube-proxy]
+module.eks.aws_eks_addon.before_compute["eks-pod-identity-agent"]: Refreshing state... [id=gearloan-eks:eks-pod-identity-agent]
+module.eks.aws_eks_addon.before_compute["vpc-cni"]: Refreshing state... [id=gearloan-eks:vpc-cni]
+module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Refreshing state... [id=gearloan-eks#arn:aws:iam::<aws-account-id>:user/devops-lab#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy]
+module.eks.module.eks_managed_node_group["default"].data.aws_ssm_parameter.ami[0]: Read complete after 0s [id=/aws/service/eks/optimized-ami/1.37/amazon-linux-2023/x86_64/standard/recommended/release_version]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Refreshing state... [id=gearloan-eks:default-34007e227cc8e988a0deaab456]
+
+Note: Objects have changed outside of Terraform
+
+Terraform detected the following changes made outside of Terraform since the
+last "terraform apply" which may have affected this plan:
+
+  # module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0] has changed
+  ~ resource "aws_eks_node_group" "this" {
+      + arn                    = "arn:aws:eks:ap-south-1:<aws-account-id>:nodegroup/gearloan-eks/default-34007e227cc8e988a0deaab456/86d0a347-56a5-c2d3-eb34-27f352f0ac8e"
+        id                     = "gearloan-eks:default-34007e227cc8e988a0deaab456"
+      + resources              = []
+      + status                 = "CREATING"
+        tags                   = {
+            "Name" = "default"
+        }
+        # (11 unchanged attributes hidden)
+
+        # (3 unchanged blocks hidden)
+    }
+
+
+Unless you have made equivalent changes to your configuration, or ignored the
+relevant attributes using ignore_changes, the following plan may include
+actions to undo or respond to these changes.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
++/- create replacement and then destroy
+
+Terraform will perform the following actions:
+
+  # module.eks.aws_eks_addon.this["aws-ebs-csi-driver"] will be created
+  + resource "aws_eks_addon" "this" {
+      + addon_name                  = "aws-ebs-csi-driver"
+      + addon_version               = "v1.67.0-eksbuild.1"
+      + arn                         = (known after apply)
+      + cluster_name                = "gearloan-eks"
+      + configuration_values        = (known after apply)
+      + created_at                  = (known after apply)
+      + id                          = (known after apply)
+      + modified_at                 = (known after apply)
+      + preserve                    = true
+      + region                      = "ap-south-1"
+      + resolve_conflicts_on_create = "NONE"
+      + resolve_conflicts_on_update = "OVERWRITE"
+      + tags_all                    = {
+          + "ManagedBy" = "terraform"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "gearloan-capstone"
+        }
+
+      + namespace_config (known after apply)
+
+      + pod_identity_association {
+          + role_arn        = "arn:aws:iam::<aws-account-id>:role/gearloan-eks-ebs-csi"
+          + service_account = "ebs-csi-controller-sa"
+        }
+
+      + timeouts {}
+    }
+
+  # module.eks.aws_eks_addon.this["coredns"] will be created
+  + resource "aws_eks_addon" "this" {
+      + addon_name                  = "coredns"
+      + addon_version               = "v1.14.7-eksbuild.11"
+      + arn                         = (known after apply)
+      + cluster_name                = "gearloan-eks"
+      + configuration_values        = (known after apply)
+      + created_at                  = (known after apply)
+      + id                          = (known after apply)
+      + modified_at                 = (known after apply)
+      + preserve                    = true
+      + region                      = "ap-south-1"
+      + resolve_conflicts_on_create = "NONE"
+      + resolve_conflicts_on_update = "OVERWRITE"
+      + tags_all                    = {
+          + "ManagedBy" = "terraform"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "gearloan-capstone"
+        }
+
+      + namespace_config (known after apply)
+
+      + timeouts {}
+    }
+
+  # module.eks.aws_eks_addon.this["kube-proxy"] will be created
+  + resource "aws_eks_addon" "this" {
+      + addon_name                  = "kube-proxy"
+      + addon_version               = "v1.37.0-eksbuild.22"
+      + arn                         = (known after apply)
+      + cluster_name                = "gearloan-eks"
+      + configuration_values        = (known after apply)
+      + created_at                  = (known after apply)
+      + id                          = (known after apply)
+      + modified_at                 = (known after apply)
+      + preserve                    = true
+      + region                      = "ap-south-1"
+      + resolve_conflicts_on_create = "NONE"
+      + resolve_conflicts_on_update = "OVERWRITE"
+      + tags_all                    = {
+          + "ManagedBy" = "terraform"
+          + "Owner"     = "srinidhi-24bcs10037"
+          + "Project"   = "gearloan-capstone"
+        }
+
+      + namespace_config (known after apply)
+
+      + timeouts {}
+    }
+
+  # module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0] is tainted, so must be replaced
++/- resource "aws_eks_node_group" "this" {
+      ~ arn                    = "arn:aws:eks:ap-south-1:<aws-account-id>:nodegroup/gearloan-eks/default-34007e227cc8e988a0deaab456/86d0a347-56a5-c2d3-eb34-27f352f0ac8e" -> (known after apply)
+      ~ disk_size              = 0 -> (known after apply)
+      ~ id                     = "gearloan-eks:default-34007e227cc8e988a0deaab456" -> (known after apply)
+      ~ instance_types         = [
+          ~ "t3.medium" -> "m7i-flex.large",
+        ]
+      - labels                 = {} -> null
+      ~ node_group_name        = "default-34007e227cc8e988a0deaab456" -> (known after apply)
+      ~ resources              = [] -> (known after apply)
+      ~ status                 = "CREATING" -> (known after apply)
+        tags                   = {
+            "Name" = "default"
+        }
+        # (10 unchanged attributes hidden)
+
+      ~ launch_template {
+            id      = "lt-0cca3a285496f08af"
+          ~ name    = "default-6da7f08978dcc81c08d17c5768" -> (known after apply)
+            # (1 unchanged attribute hidden)
+        }
+
+      ~ node_repair_config (known after apply)
+
+      ~ update_config {
+          - max_unavailable            = 0 -> null
+            # (2 unchanged attributes hidden)
+        }
+
+        # (1 unchanged block hidden)
+    }
+
+Plan: 4 to add, 0 to change, 1 to destroy.
+
+Changes to Outputs:
+  + node_group_name   = (known after apply)
+
+$ terraform apply -no-color tfplan   # started 23:40:46 CEST
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Creating...
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still creating... [00m10s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still creating... [00m20s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still creating... [00m30s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still creating... [00m40s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still creating... [00m50s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still creating... [01m00s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still creating... [01m10s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still creating... [01m20s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Creation complete after 1m21s [id=gearloan-eks:default-301e921cb5ae6ce52bfb25489b]
+module.eks.aws_eks_addon.this["kube-proxy"]: Creating...
+module.eks.aws_eks_addon.this["coredns"]: Creating...
+module.eks.aws_eks_addon.this["aws-ebs-csi-driver"]: Creating...
+module.eks.aws_eks_addon.this["coredns"]: Still creating... [00m10s elapsed]
+module.eks.aws_eks_addon.this["kube-proxy"]: Still creating... [00m10s elapsed]
+module.eks.aws_eks_addon.this["aws-ebs-csi-driver"]: Still creating... [00m10s elapsed]
+module.eks.aws_eks_addon.this["coredns"]: Creation complete after 15s [id=gearloan-eks:coredns]
+module.eks.aws_eks_addon.this["aws-ebs-csi-driver"]: Still creating... [00m20s elapsed]
+module.eks.aws_eks_addon.this["kube-proxy"]: Still creating... [00m20s elapsed]
+module.eks.aws_eks_addon.this["kube-proxy"]: Creation complete after 26s [id=gearloan-eks:kube-proxy]
+module.eks.aws_eks_addon.this["aws-ebs-csi-driver"]: Still creating... [00m30s elapsed]
+module.eks.aws_eks_addon.this["aws-ebs-csi-driver"]: Creation complete after 38s [id=gearloan-eks:aws-ebs-csi-driver]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0] (deposed object 9fe5db69): Destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 00m10s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 00m20s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 00m30s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 00m40s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 00m50s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 01m00s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 01m10s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 01m20s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 01m30s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 01m40s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 01m50s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 02m00s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 02m10s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 02m20s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 02m30s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 02m40s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 02m50s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 03m00s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Still destroying... [id=gearloan-eks:default-34007e227cc8e988a0deaab456, 03m10s elapsed]
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0]: Destruction complete after 3m10s
+
+Apply complete! Resources: 4 added, 0 changed, 1 destroyed.
+
+Outputs:
+
+cluster_endpoint = "https://279562B84E0B98D9B76B0C92CE9D56EB.gr7.ap-south-1.eks.amazonaws.com"
+cluster_name = "gearloan-eks"
+configure_kubectl = "aws eks update-kubeconfig --region ap-south-1 --name gearloan-eks --profile devops-lab"
+node_group_name = "gearloan-eks:default-301e921cb5ae6ce52bfb25489b"
+public_subnet_ids = [
+  "subnet-0fa6882b0aec6d397",
+  "subnet-0f511b368ebcfe1d3",
+]
+region = "ap-south-1"
+storage_note = "EBS CSI driver is installed. Create a gp3 default StorageClass and install metrics-server with kubectl/Helm after the cluster is up. Delete LoadBalancer Services and PVCs before terraform destroy."
+vpc_id = "vpc-0dacaeed889bf7dd8"
+# finished 23:45:58 CEST
+
+$ terraform output -no-color
+cluster_endpoint = "https://279562B84E0B98D9B76B0C92CE9D56EB.gr7.ap-south-1.eks.amazonaws.com"
+cluster_name = "gearloan-eks"
+configure_kubectl = "aws eks update-kubeconfig --region ap-south-1 --name gearloan-eks --profile devops-lab"
+node_group_name = "gearloan-eks:default-301e921cb5ae6ce52bfb25489b"
+public_subnet_ids = [
+  "subnet-0fa6882b0aec6d397",
+  "subnet-0f511b368ebcfe1d3",
+]
+region = "ap-south-1"
+storage_note = "EBS CSI driver is installed. Create a gp3 default StorageClass and install metrics-server with kubectl/Helm after the cluster is up. Delete LoadBalancer Services and PVCs before terraform destroy."
+vpc_id = "vpc-0dacaeed889bf7dd8"

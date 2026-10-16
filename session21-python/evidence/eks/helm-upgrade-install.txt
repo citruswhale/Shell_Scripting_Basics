@@ -1,0 +1,54 @@
+$ helm upgrade --install gearloan helm/gearloan -n gearloan-helm -f helm/gearloan/values-eks.yaml --set ingress.enabled=false --set serviceMonitor.enabled=false --wait --timeout 8m
+Release "gearloan" does not exist. Installing it now.
+NAME: gearloan
+LAST DEPLOYED: Sat Oct 17 00:00:29 2026
+NAMESPACE: gearloan-helm
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+GearLoan 1.0.0-ca56b95 is deployed in namespace gearloan-helm.
+
+Check the pods:
+  kubectl get pods,svc,ingress,hpa,pvc -n gearloan-helm
+
+Port-forward the frontend:
+  kubectl port-forward -n gearloan-helm svc/gearloan-frontend 8080:8080
+
+$ helm list -n gearloan-helm
+NAME    	NAMESPACE    	REVISION	UPDATED                              	STATUS  	CHART         	APP VERSION
+gearloan	gearloan-helm	1       	2026-10-17 00:00:29.176735 +0200 CEST	deployed	gearloan-0.1.0	1.0.0      
+
+$ kubectl get pods,svc -n gearloan-helm
+NAME                                     READY   STATUS    RESTARTS      AGE
+pod/gearloan-backend-55fb999cdb-gn4bj    1/1     Running   1 (10s ago)   27s
+pod/gearloan-backend-55fb999cdb-sjfjs    1/1     Running   0             27s
+pod/gearloan-frontend-5459d9899d-gtlsn   1/1     Running   0             27s
+pod/gearloan-frontend-5459d9899d-xcz7r   1/1     Running   0             27s
+pod/gearloan-postgres-0                  1/1     Running   0             27s
+
+NAME                        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/gearloan-backend    ClusterIP   172.20.63.198   <none>        8000/TCP   28s
+service/gearloan-frontend   ClusterIP   172.20.5.215    <none>        8080/TCP   28s
+service/gearloan-postgres   ClusterIP   None            <none>        5432/TCP   28s
+
+$ helm status gearloan -n gearloan-helm | head -8
+NAME: gearloan
+LAST DEPLOYED: Sat Oct 17 00:00:29 2026
+NAMESPACE: gearloan-helm
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+RESOURCES:
+==> v1/ServiceAccount
+
+$ helm uninstall gearloan -n gearloan-helm --wait; kubectl delete pvc --all -n gearloan-helm --wait=true; kubectl delete namespace gearloan-helm --wait=true; helm list -A
+release "gearloan" uninstalled
+persistentvolumeclaim "data-gearloan-postgres-0" deleted from gearloan-helm namespace
+namespace "gearloan-helm" deleted
+NAME                 	NAMESPACE    	REVISION	UPDATED                              	STATUS  	CHART                        	APP VERSION
+ingress-nginx        	ingress-nginx	2       	2026-10-16 23:56:55.497026 +0200 CEST	deployed	ingress-nginx-4.15.1         	1.15.1     
+kube-prometheus-stack	monitoring   	1       	2026-10-16 23:48:20.484976 +0200 CEST	deployed	kube-prometheus-stack-92.10.1	v0.94.1    
+metrics-server       	kube-system  	1       	2026-10-16 23:46:27.053318 +0200 CEST	deployed	metrics-server-3.14.0        	0.9.0      
+
