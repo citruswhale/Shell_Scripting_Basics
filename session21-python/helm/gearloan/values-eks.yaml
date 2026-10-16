@@ -5,13 +5,22 @@ image:
   registry: ghcr.io/citruswhale
   pullPolicy: IfNotPresent
 
+# ---- Set by CI (.github/workflows/capstone-ci-cd.yml, gitops-update job) ----
+# Every green push to master writes the full commit SHA of the scanned images
+# into the three lines marked "# ci:..." and commits it. Argo CD sees the
+# change and rolls the new images out. Do not edit those lines by hand.
+# "set-by-ci" is only a placeholder: no image has this tag, so the first
+# pipeline run on master has to replace it before Argo CD can start the pods.
 backend:
   image:
-    tag: ""   # CI sets this to the commit SHA tag; empty = appVersion
+    tag: "set-by-ci" # ci:backend-tag
+  # Shown by /api/info, e.g. 1.0.0-abc1234 (chart appVersion + short SHA)
+  appVersion: "set-by-ci" # ci:backend-version
 
 frontend:
   image:
-    tag: ""
+    tag: "set-by-ci" # ci:frontend-tag
+# ---- end of CI managed fields ----
 
 postgres:
   # Argo CD renders with "helm template", where lookup does not work, so a

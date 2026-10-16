@@ -1,0 +1,781 @@
+# Capstone - GearLoan CI/CD pipeline (session21-python/)
+#
+# Flow:
+#   tests (pytest + Postgres) and frontend build
+#   SAST, SCA, secret scan, Helm and Terraform checks   (run in parallel)
+#   docker build (both images) -> Trivy image scan -> security gate
+#   -> deploy test on a throwaway kind cluster (the scanned images, smoke tests)
+#   -> push the same scanned images to GHCR (tagged with the commit SHA)
+#   -> GitOps: write the new tag into values-eks.yaml, Argo CD deploys it to EKS
+#
+# Nothing is pushed or deployed unless every check before it passed.
+name: Capstone GearLoan CI/CD
+
+on:
+  push:
+    # The repo's default branch is master. main is listed too in case it is renamed.
+    branches: [main, master]
+    paths:
+      - "session21-python/**"
+      - ".github/workflows/capstone-ci-cd.yml"
+  workflow_dispatch:
+
+# Default for every job: read-only. Jobs that need more ask for it themselves.
+permissions:
+  contents: read
+
+# One run per branch at a time. On master/main a running deploy is never
+# cancelled half way, the next run waits for it instead.
+concurrency:
+  group: capstone-ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
+
+env:
+  APP_DIR: session21-python
+  BACKEND_DIR: session21-python/backend
+  FRONTEND_DIR: session21-python/frontend
+  CHART_DIR: session21-python/helm/gearloan
+  TF_DIR: session21-python/terraform
+  IMAGE_PREFIX: ghcr.io/citruswhale
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "24"
+  TRIVY_VERSION: v0.76.0
+  GITLEAKS_VERSION: 8.30.1
+  HELM_VERSION: v4.3.1
+  TERRAFORM_VERSION: 1.16.6
+  YQ_VERSION: v4.54.1
+  # sha256 of yq_linux_amd64 from the v4.54.1 release "checksums" file
+  YQ_SHA256: 8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f
+
+jobs:
+  # ---------- 0. Version info used by the later jobs ----------
+  meta:
+    name: Version info
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.v.outputs.sha }}
+      short_sha: ${{ steps.v.outputs.short_sha }}
+      app_version: ${{ steps.v.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Image tag = full commit SHA. App version = chart appVersion + short SHA (e.g. 1.0.0-abc1234)
+      - name: Work out tag and version
+        id: v
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          chart_version=$(awk -F'"' '/^appVersion:/ {print $2}' "$CHART_DIR/Chart.yaml")
+          [ -n "$chart_version" ] || { echo "appVersion not found in Chart.yaml"; exit 1; }
+          {
+            echo "sha=${GITHUB_SHA}"
+            echo "short_sha=${short_sha}"
+            echo "app_version=${chart_version}-${short_sha}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Image tag: ${GITHUB_SHA}, app version: ${chart_version}-${short_sha}"
+
+  # ---------- 1. Backend tests against a real Postgres ----------
+  backend-test:
+    name: Backend tests (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ${{ env.BACKEND_DIR }}
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: gearloan
+          POSTGRES_PASSWORD: gearloan
+          POSTGRES_DB: gearloan_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gearloan -d gearloan_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # conftest.py refuses any database whose name does not contain "test"
+      TEST_DATABASE_URL: postgresql+psycopg://gearloan:gearloan@localhost:5432/gearloan_test
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            ${{ env.BACKEND_DIR }}/requirements.txt
+            ${{ env.BACKEND_DIR }}/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # Any failing test makes pytest exit non-zero, which fails the job and the build
+      - name: Run pytest
+        run: |
+          mkdir -p reports
+          pytest -v --junitxml=reports/junit.xml
+
+      - name: Test summary
+        if: always() && hashFiles('session21-python/backend/reports/junit.xml') != ''
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          root = ET.parse("reports/junit.xml").getroot()
+          s = root if root.tag == "testsuite" else root.find("testsuite")
+          total, fail, err, skip = (int(s.get(k, 0)) for k in ("tests", "failures", "errors", "skipped"))
+          print("## Backend tests (pytest)")
+          print("")
+          print("| Total | Passed | Failed | Errors | Skipped |")
+          print("|------:|-------:|-------:|-------:|--------:|")
+          print(f"| {total} | {total - fail - err - skip} | {fail} | {err} | {skip} |")
+          EOF
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gearloan-pytest-junit
+          path: ${{ env.BACKEND_DIR }}/reports/junit.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------- 2. Frontend build ----------
+  frontend-build:
+    name: Frontend build (Vite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ env.FRONTEND_DIR }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      - name: Install dependencies (exact versions from package-lock.json)
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: |
+          npm run build
+          ls -la dist dist/assets
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: gearloan-frontend-dist
+          path: ${{ env.FRONTEND_DIR }}/dist/
+          retention-days: 7
+
+  # ---------- 3. SAST: Bandit on the backend code ----------
+  sast:
+    name: SAST (Bandit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ${{ env.BACKEND_DIR }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Bandit
+        run: pip install "bandit==1.9.4"
+
+      - name: Bandit report (JSON)
+        if: always()
+        run: |
+          mkdir -p reports
+          bandit -c ../security/bandit.yaml -r app -f json -o reports/bandit.json --exit-zero
+
+      # Gate: fails on any Bandit finding of low severity or above
+      - name: Bandit gate
+        run: bandit -c ../security/bandit.yaml -r app
+
+      - name: Upload SAST report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gearloan-sast-report
+          path: ${{ env.BACKEND_DIR }}/reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------- 4. SCA: pip-audit (backend) + npm audit (frontend) ----------
+  sca:
+    name: SCA (pip-audit, npm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pip-audit
+        run: pip install "pip-audit==2.10.1"
+
+      # Gate: any known vulnerability in the pinned runtime deps fails the job
+      - name: pip-audit gate
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/reports"
+          pip-audit -r requirements.txt --strict --desc
+          pip-audit -r requirements.txt --strict -f json -o "$GITHUB_WORKSPACE/reports/pip-audit.json"
+
+      # Gate: HIGH or CRITICAL advisories in the packages that end up in the browser bundle.
+      # Dev tools (vite etc.) only run at build time, so they are left out with --omit=dev.
+      - name: npm audit gate
+        if: always()
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/reports"
+          npm audit --omit=dev --json > "$GITHUB_WORKSPACE/reports/npm-audit.json" || true
+          npm audit --omit=dev --audit-level=high
+
+      - name: Upload SCA reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gearloan-sca-reports
+          path: reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------- 5. Secret scan: Gitleaks over the whole Git history ----------
+  secret-scan:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history, not just the last commit
+
+      - name: Install gitleaks (pinned, checksum checked)
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$file" "$base/$file"
+          curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " ${file}\$" checksums.txt | sha256sum -c -
+          tar -xzf "$file" gitleaks
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+
+      # Default rules. .gitleaksignore in the repo root lists only the known
+      # lab false positives (Session 12 fake password, Session 16 SHA tag).
+      - name: Gitleaks gate
+        run: gitleaks git . --redact --verbose --report-format sarif --report-path gitleaks.sarif
+
+      - name: Upload Gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gearloan-gitleaks-report
+          path: gitleaks.sarif
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ---------- 6. Helm chart and Terraform checks ----------
+  iac-validate:
+    name: Helm and Terraform checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: helm lint
+        run: |
+          helm lint "$CHART_DIR"
+          helm lint "$CHART_DIR" -f "$CHART_DIR/values-local.yaml"
+          helm lint "$CHART_DIR" -f "$CHART_DIR/values-eks.yaml"
+
+      - name: helm template (local and EKS values)
+        run: |
+          mkdir -p rendered
+          helm template gearloan "$CHART_DIR" -n gearloan -f "$CHART_DIR/values-local.yaml" > rendered/local.yaml
+          helm template gearloan "$CHART_DIR" -n gearloan -f "$CHART_DIR/values-eks.yaml" > rendered/eks.yaml
+          echo "EKS images:"
+          grep -E '^\s+image: ' rendered/eks.yaml | sort -u
+
+      - name: Upload rendered manifests
+        uses: actions/upload-artifact@v7
+        with:
+          name: gearloan-helm-rendered
+          path: rendered/
+          retention-days: 7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform fmt
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform fmt -check -recursive -diff
+
+      # -backend=false: only downloads providers/modules, never touches real state or AWS
+      - name: terraform init and validate
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+  # ---------- 7. Docker build (once per image), saved as a tarball ----------
+  docker-build:
+    name: Docker build (${{ matrix.component }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [meta, backend-test, frontend-build]
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    env:
+      IMAGE: ghcr.io/citruswhale/gearloan-${{ matrix.component }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      # linux/amd64 because the EKS nodes are x86 (t3.medium).
+      # All tags go into the tarball, the push job pushes exactly this image.
+      - name: Build image to a tarball
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ env.APP_DIR }}/${{ matrix.component }}
+          platforms: linux/amd64
+          tags: |
+            ${{ env.IMAGE }}:${{ needs.meta.outputs.sha }}
+            ${{ env.IMAGE }}:${{ needs.meta.outputs.short_sha }}
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.meta.outputs.app_version }}
+            org.opencontainers.image.title=gearloan-${{ matrix.component }}
+          cache-from: type=gha,scope=gearloan-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=gearloan-${{ matrix.component }}
+          outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.component }}.tar
+
+      - name: Upload image tarball
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ matrix.component }}
+          path: ${{ runner.temp }}/${{ matrix.component }}.tar
+          retention-days: 1
+
+  # ---------- 8. Container image scan (before anything is pushed) ----------
+  image-scan:
+    name: Image scan (Trivy, ${{ matrix.component }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: docker-build
+    strategy:
+      fail-fast: false # always see the result for both images
+      matrix:
+        component: [backend, frontend]
+    permissions:
+      contents: read
+      security-events: write # only for uploading SARIF to the Security tab
+    env:
+      TARBALL: ${{ github.workspace }}/images/${{ matrix.component }}.tar
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image tarball
+        uses: actions/download-artifact@v8
+        with:
+          name: image-${{ matrix.component }}
+          path: images
+
+      # Gate: table output in the log, exit code 1 on fixable HIGH/CRITICAL (security/trivy.yaml)
+      - name: Trivy image gate
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          input: ${{ env.TARBALL }}
+          trivy-config: ${{ env.APP_DIR }}/security/trivy.yaml
+
+      - name: Trivy JSON report
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          skip-setup-trivy: true
+          input: ${{ env.TARBALL }}
+          trivy-config: ${{ env.APP_DIR }}/security/trivy.yaml
+          exit-code: "0"
+          format: json
+          output: trivy-${{ matrix.component }}.json
+
+      - name: Trivy SARIF report
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          skip-setup-trivy: true
+          input: ${{ env.TARBALL }}
+          trivy-config: ${{ env.APP_DIR }}/security/trivy.yaml
+          exit-code: "0"
+          format: sarif
+          output: trivy-${{ matrix.component }}.sarif
+          limit-severities-for-sarif: true
+
+      - name: Scan summary
+        if: always() && hashFiles(format('trivy-{0}.json', matrix.component)) != ''
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          report="trivy-${COMPONENT}.json"
+          high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' "$report")
+          critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' "$report")
+          os=$(jq -r '.Metadata.OS | "\(.Family // "-") \(.Name // "")"' "$report")
+          {
+            echo "## Trivy image scan: gearloan-${COMPONENT}"
+            echo ""
+            echo "| Base OS | CRITICAL | HIGH |"
+            echo "|---------|---------:|-----:|"
+            echo "| ${os} | ${critical} | ${high} |"
+            echo ""
+            echo "Counts are fixable findings only (ignore-unfixed). Any non-zero count fails the gate."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload image scan reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gearloan-trivy-${{ matrix.component }}
+          path: |
+            trivy-${{ matrix.component }}.json
+            trivy-${{ matrix.component }}.sarif
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Shows results in the repo Security tab. Not a gate, so it may not fail the run.
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles(format('trivy-{0}.sarif', matrix.component)) != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ matrix.component }}.sarif
+          category: gearloan-trivy-${{ matrix.component }}
+
+  # ---------- 9. Security gate ----------
+  # Only runs when every check above passed (needs: waits for success by default)
+  security-gate:
+    name: Security gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [backend-test, frontend-build, sast, sca, secret-scan, iac-validate, image-scan]
+    steps:
+      - name: All checks passed
+        run: |
+          {
+            echo "## Security gate: PASSED"
+            echo ""
+            echo "| Check | Tool | Result |"
+            echo "|-------|------|--------|"
+            echo "| Backend tests | pytest + Postgres 17 | ${{ needs.backend-test.result }} |"
+            echo "| Frontend build | npm ci + vite build | ${{ needs.frontend-build.result }} |"
+            echo "| SAST | Bandit | ${{ needs.sast.result }} |"
+            echo "| SCA | pip-audit, npm audit | ${{ needs.sca.result }} |"
+            echo "| Secret scan | Gitleaks (full history) | ${{ needs.secret-scan.result }} |"
+            echo "| IaC checks | helm lint/template, terraform fmt/validate | ${{ needs.iac-validate.result }} |"
+            echo "| Image scan | Trivy (backend + frontend) | ${{ needs.image-scan.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "All checks passed, the images can be deployed and pushed."
+
+  # ---------- 10. Deploy test on a throwaway kind cluster ----------
+  # Uses the scanned tarballs directly, so it does not depend on GHCR.
+  deploy-test:
+    name: Deploy test (kind + Helm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [meta, security-gate]
+    env:
+      SHA: ${{ needs.meta.outputs.sha }}
+      APP_VERSION: ${{ needs.meta.outputs.app_version }}
+      NS: gearloan
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download image tarballs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: image-*
+          merge-multiple: true
+          path: images
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: gearloan-ci
+
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Load the scanned images into kind
+        run: |
+          kind load image-archive images/backend.tar --name gearloan-ci
+          kind load image-archive images/frontend.tar --name gearloan-ci
+          docker exec gearloan-ci-control-plane crictl images | grep gearloan
+
+      # Same namespace as on EKS, with Pod Security "restricted" turned on
+      - name: Create namespace
+        run: kubectl apply -f "$APP_DIR/k8s/namespace.yaml"
+
+      # values-local.yaml as the base (kind's default StorageClass is also "standard"),
+      # then the SHA tagged images. pullPolicy Never proves the loaded images are used.
+      - name: helm upgrade --install
+        run: |
+          db_password=$(openssl rand -hex 16)
+          echo "::add-mask::${db_password}"
+          helm upgrade --install gearloan "$CHART_DIR" -n "$NS" \
+            -f "$CHART_DIR/values-local.yaml" \
+            --set image.registry="$IMAGE_PREFIX" \
+            --set image.pullPolicy=Never \
+            --set postgres.image.pullPolicy=IfNotPresent \
+            --set backend.image.tag="$SHA" \
+            --set frontend.image.tag="$SHA" \
+            --set backend.appVersion="$APP_VERSION" \
+            --set postgres.password="$db_password" \
+            --set ingress.enabled=false \
+            --wait --timeout 6m
+
+      - name: Wait for rollout
+        run: |
+          kubectl -n "$NS" rollout status statefulset/gearloan-postgres --timeout=180s
+          kubectl -n "$NS" rollout status deployment/gearloan-backend --timeout=180s
+          kubectl -n "$NS" rollout status deployment/gearloan-frontend --timeout=180s
+
+      # Everything goes through the frontend nginx, the same path a browser uses
+      - name: Smoke test
+        run: |
+          kubectl -n "$NS" port-forward svc/gearloan-frontend 8080:8080 >/tmp/pf.log 2>&1 &
+          base=http://127.0.0.1:8080
+          curl -sf --retry 10 --retry-delay 2 --retry-all-errors -o /dev/null "$base/healthz"
+
+          fail() { echo "SMOKE TEST FAILED: $*"; exit 1; }
+
+          curl -sf "$base/" | grep -q "<title>GearLoan</title>" || fail "index page does not say GearLoan"
+          echo "GET /            -> GearLoan page OK"
+
+          health=$(curl -sf "$base/api/health")
+          echo "GET /api/health  -> $health"
+          [ "$(echo "$health" | jq -r .status)" = "ok" ] || fail "health"
+
+          ready=$(curl -sf "$base/api/ready")
+          echo "GET /api/ready   -> $ready"
+          [ "$(echo "$ready" | jq -r .status)" = "ready" ] || fail "ready"
+
+          info=$(curl -sf "$base/api/info")
+          echo "GET /api/info    -> $info"
+          [ "$(echo "$info" | jq -r .version)" = "$APP_VERSION" ] || fail "wrong version deployed (want $APP_VERSION)"
+
+          # Full loan cycle: add an item, lend it, return it
+          item=$(curl -sf -X POST "$base/api/items" -H 'Content-Type: application/json' \
+            -d "{\"name\":\"CI test camera\",\"category\":\"camera\",\"serial_number\":\"CI-${SHA::7}\"}")
+          item_id=$(echo "$item" | jq -r .id)
+          echo "POST /api/items  -> id=$item_id status=$(echo "$item" | jq -r .status)"
+          [ "$(echo "$item" | jq -r .status)" = "available" ] || fail "new item not available"
+
+          due=$(date -u -d '+7 days' +%F)
+          loan=$(curl -sf -X POST "$base/api/loans" -H 'Content-Type: application/json' \
+            -d "{\"item_id\":${item_id},\"borrower_name\":\"CI Bot\",\"borrower_email\":\"ci@example.com\",\"due_date\":\"${due}\"}")
+          loan_id=$(echo "$loan" | jq -r .id)
+          echo "POST /api/loans  -> id=$loan_id status=$(echo "$loan" | jq -r .status)"
+          [ "$(echo "$loan" | jq -r .status)" = "active" ] || fail "loan not active"
+          [ "$(curl -sf "$base/api/items/${item_id}" | jq -r .status)" = "on_loan" ] || fail "item not on_loan"
+
+          ret=$(curl -sf -X POST "$base/api/loans/${loan_id}/return" -H 'Content-Type: application/json' -d '{"condition":"good"}')
+          echo "POST /api/loans/${loan_id}/return -> status=$(echo "$ret" | jq -r .status)"
+          [ "$(echo "$ret" | jq -r .status)" = "returned" ] || fail "loan not returned"
+          [ "$(curl -sf "$base/api/items/${item_id}" | jq -r .status)" = "available" ] || fail "item not available after return"
+
+          {
+            echo "## Deploy test (kind)"
+            echo "Helm release installed with the scanned images, smoke test passed."
+            echo '```'
+            echo "/api/health -> $health"
+            echo "/api/ready  -> $ready"
+            echo "/api/info   -> $info"
+            echo "item ${item_id}: available -> on_loan -> available (loan ${loan_id} returned)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show cluster state
+        if: always()
+        run: |
+          kubectl -n "$NS" get pods,svc,pvc -o wide || true
+          kubectl -n "$NS" get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}' || true
+
+      - name: Debug info on failure
+        if: failure()
+        run: |
+          kubectl -n "$NS" describe pods || true
+          kubectl -n "$NS" logs deploy/gearloan-backend --all-containers --tail=100 || true
+          kubectl -n "$NS" logs deploy/gearloan-frontend --tail=50 || true
+          kubectl -n "$NS" get events --sort-by=.lastTimestamp | tail -30 || true
+
+  # ---------- 11. Push the same scanned images to GHCR ----------
+  push:
+    name: Push images to GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [meta, deploy-test]
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    env:
+      SHA: ${{ needs.meta.outputs.sha }}
+      SHORT_SHA: ${{ needs.meta.outputs.short_sha }}
+    outputs:
+      backend_digest: ${{ steps.push.outputs.backend_digest }}
+      frontend_digest: ${{ steps.push.outputs.frontend_digest }}
+    steps:
+      - name: Download image tarballs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: image-*
+          merge-multiple: true
+          path: images
+
+      - name: Load images
+        run: |
+          docker load -i images/backend.tar
+          docker load -i images/frontend.tar
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The deployment always uses the full SHA tag. short SHA and latest are only for people.
+      - name: Push
+        id: push
+        run: |
+          {
+            echo "## Pushed images"
+            echo ""
+            echo "| Image | Digest |"
+            echo "|-------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for c in backend frontend; do
+            image="${IMAGE_PREFIX}/gearloan-${c}"
+            for tag in "$SHA" "$SHORT_SHA" latest; do
+              docker push "${image}:${tag}"
+            done
+            digest=$(docker inspect --format '{{index .RepoDigests 0}}' "${image}:${SHA}")
+            digest="${digest#*@}"
+            echo "${c}_digest=${digest}" >> "$GITHUB_OUTPUT"
+            echo "| \`${image}:${SHA}\` | \`${digest}\` |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  # ---------- 12. GitOps: tell Argo CD about the new images ----------
+  # Argo CD watches values-eks.yaml on master, so this commit is the EKS deploy.
+  # Pushes made with GITHUB_TOKEN never start a new workflow run, and the
+  # commit message also has [skip ci], so this cannot loop.
+  gitops-update:
+    name: GitOps update (values-eks.yaml)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [meta, push, deploy-test]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    permissions:
+      contents: write # only this job may push to the repo
+    env:
+      SHA: ${{ needs.meta.outputs.sha }}
+      SHORT_SHA: ${{ needs.meta.outputs.short_sha }}
+      APP_VERSION: ${{ needs.meta.outputs.app_version }}
+      VALUES_FILE: session21-python/helm/gearloan/values-eks.yaml
+    steps:
+      # The branch tip, not the run's commit: master may have moved since the run started
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Install yq (pinned, checksum checked)
+        run: |
+          curl -sSfL -o yq "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          echo "${YQ_SHA256}  yq" | sha256sum -c -
+          chmod +x yq
+          sudo mv yq /usr/local/bin/yq
+          yq --version
+
+      # sed only touches the three lines marked "# ci:..." so the rest of the
+      # file (comments, blank lines) stays exactly as written. yq then reads
+      # the file back as YAML to check the result.
+      - name: Write the new image tags
+        run: |
+          for marker in backend-tag frontend-tag backend-version; do
+            [ "$(grep -c "# ci:${marker}\$" "$VALUES_FILE")" = 1 ] || { echo "marker ci:${marker} missing"; exit 1; }
+          done
+          sed -i -E \
+            -e "s|^([[:space:]]+tag: )\"[^\"]*\"( # ci:backend-tag)\$|\1\"${SHA}\"\2|" \
+            -e "s|^([[:space:]]+tag: )\"[^\"]*\"( # ci:frontend-tag)\$|\1\"${SHA}\"\2|" \
+            -e "s|^([[:space:]]+appVersion: )\"[^\"]*\"( # ci:backend-version)\$|\1\"${APP_VERSION}\"\2|" \
+            "$VALUES_FILE"
+          git diff -- "$VALUES_FILE"
+          [ "$(yq '.backend.image.tag' "$VALUES_FILE")" = "$SHA" ]
+          [ "$(yq '.frontend.image.tag' "$VALUES_FILE")" = "$SHA" ]
+          [ "$(yq '.backend.appVersion' "$VALUES_FILE")" = "$APP_VERSION" ]
+          [ "$(yq '.image.registry' "$VALUES_FILE")" = "$IMAGE_PREFIX" ]
+          [ "$(yq '.postgres.existingSecret' "$VALUES_FILE")" = "gearloan-db" ]
+          echo "values-eks.yaml now points at ${SHA}"
+
+      - name: Commit and push (retry if master moved)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$VALUES_FILE"
+          if git diff --cached --quiet; then
+            echo "values-eks.yaml already has ${SHA}, nothing to commit."
+            exit 0
+          fi
+          git commit -m "ci: deploy gearloan ${SHORT_SHA} [skip ci]"
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "Pushed on attempt ${attempt}."
+              break
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "Push failed 3 times, giving up."
+              exit 1
+            fi
+            echo "Push rejected (branch moved?), rebasing and trying again..."
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            sleep $((attempt * 5))
+          done
+          {
+            echo "## GitOps update"
+            echo "Committed \`ci: deploy gearloan ${SHORT_SHA} [skip ci]\` to \`${GITHUB_REF_NAME}\`."
+            echo ""
+            echo "- backend:  \`${IMAGE_PREFIX}/gearloan-backend:${SHA}\` (\`${{ needs.push.outputs.backend_digest }}\`)"
+            echo "- frontend: \`${IMAGE_PREFIX}/gearloan-frontend:${SHA}\` (\`${{ needs.push.outputs.frontend_digest }}\`)"
+            echo "- app version: \`${APP_VERSION}\`"
+            echo ""
+            echo "Argo CD (app \`gearloan\`) picks this up from values-eks.yaml and rolls it out to EKS."
+          } >> "$GITHUB_STEP_SUMMARY"

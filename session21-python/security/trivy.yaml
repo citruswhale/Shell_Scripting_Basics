@@ -1,0 +1,12 @@
+# Trivy settings for the GearLoan image scans in .github/workflows/capstone-ci-cd.yml
+# Only HIGH and CRITICAL fail the pipeline. Unfixed CVEs are left out because
+# there is no newer package version we could move to yet.
+severity:
+  - HIGH
+  - CRITICAL
+exit-code: 1
+scan:
+  scanners:
+    - vuln
+vulnerability:
+  ignore-unfixed: true

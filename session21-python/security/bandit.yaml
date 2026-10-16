@@ -1,0 +1,7 @@
+# Bandit (SAST for Python) settings, used with: bandit -c ../security/bandit.yaml -r app
+# Tests are not scanned because pytest uses plain assert on purpose (B101).
+exclude_dirs:
+  - tests
+  - .venv
+# No checks are skipped for the app code.
+skips: []
