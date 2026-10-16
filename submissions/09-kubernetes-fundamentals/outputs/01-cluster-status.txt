@@ -1,0 +1,101 @@
+$ minikube status -p devops-lab
+devops-lab
+type: Control Plane
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+
+
+$ kubectl cluster-info
+Kubernetes control plane is running at https://127.0.0.1:50214
+CoreDNS is running at https://127.0.0.1:50214/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+$ kubectl version
+Client Version: v1.37.1
+Kustomize Version: v5.8.1
+Server Version: v1.37.0
+
+$ kubectl get nodes -o wide
+NAME         STATUS     ROLES           AGE   VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION            CONTAINER-RUNTIME
+devops-lab   NotReady   control-plane   20s   v1.37.0   192.168.49.2   <none>        Debian GNU/Linux 12 (bookworm)   7.0.14-linuxkit (arm64)   containerd://2.3.4
+
+$ kubectl get pods -n kube-system -o wide
+NAME                                 READY   STATUS    RESTARTS   AGE   IP             NODE         NOMINATED NODE   READINESS GATES
+coredns-559f6c778d-qhjsr             0/1     Pending   0          12s   <none>         <none>       <none>           <none>
+etcd-devops-lab                      0/1     Running   0          18s   192.168.49.2   devops-lab   <none>           <none>
+kindnet-g2hct                        1/1     Running   0          12s   192.168.49.2   devops-lab   <none>           <none>
+kube-apiserver-devops-lab            1/1     Running   0          18s   192.168.49.2   devops-lab   <none>           <none>
+kube-controller-manager-devops-lab   1/1     Running   0          18s   192.168.49.2   devops-lab   <none>           <none>
+kube-proxy-d6d2p                     1/1     Running   0          12s   192.168.49.2   devops-lab   <none>           <none>
+kube-scheduler-devops-lab            1/1     Running   0          18s   192.168.49.2   devops-lab   <none>           <none>
+storage-provisioner                  0/1     Pending   0          17s   <none>         <none>       <none>           <none>
+
+$ kubectl get componentstatuses 2>/dev/null || true
+NAME                 STATUS    MESSAGE   ERROR
+controller-manager   Healthy   ok        
+scheduler            Healthy   ok        
+etcd-0               Healthy   ok        
+
+$ kubectl api-resources | head -25
+NAME                                SHORTNAMES   APIVERSION                        NAMESPACED   KIND
+bindings                                         v1                                true         Binding
+componentstatuses                   cs           v1                                false        ComponentStatus
+configmaps                          cm           v1                                true         ConfigMap
+endpoints                           ep           v1                                true         Endpoints
+events                              ev           v1                                true         Event
+limitranges                         limits       v1                                true         LimitRange
+namespaces                          ns           v1                                false        Namespace
+nodes                               no           v1                                false        Node
+persistentvolumeclaims              pvc          v1                                true         PersistentVolumeClaim
+persistentvolumes                   pv           v1                                false        PersistentVolume
+pods                                po           v1                                true         Pod
+podtemplates                                     v1                                true         PodTemplate
+replicationcontrollers              rc           v1                                true         ReplicationController
+resourcequotas                      quota        v1                                true         ResourceQuota
+secrets                                          v1                                true         Secret
+serviceaccounts                     sa           v1                                true         ServiceAccount
+services                            svc          v1                                true         Service
+mutatingadmissionpolicies                        admissionregistration.k8s.io/v1   false        MutatingAdmissionPolicy
+mutatingadmissionpolicybindings                  admissionregistration.k8s.io/v1   false        MutatingAdmissionPolicyBinding
+mutatingwebhookconfigurations                    admissionregistration.k8s.io/v1   false        MutatingWebhookConfiguration
+validatingadmissionpolicies                      admissionregistration.k8s.io/v1   false        ValidatingAdmissionPolicy
+validatingadmissionpolicybindings                admissionregistration.k8s.io/v1   false        ValidatingAdmissionPolicyBinding
+validatingwebhookconfigurations                  admissionregistration.k8s.io/v1   false        ValidatingWebhookConfiguration
+customresourcedefinitions           crd,crds     apiextensions.k8s.io/v1           false        CustomResourceDefinition
+
+$ kubectl get ns
+NAME              STATUS   AGE
+default           Active   20s
+kube-node-lease   Active   20s
+kube-public       Active   20s
+kube-system       Active   20s
+
+$ kubectl wait --for=condition=Ready node/devops-lab --timeout=180s && kubectl wait -n kube-system --for=condition=Ready pod --all --timeout=180s
+node/devops-lab condition met
+pod/coredns-559f6c778d-qhjsr condition met
+pod/etcd-devops-lab condition met
+pod/kindnet-g2hct condition met
+pod/kube-apiserver-devops-lab condition met
+pod/kube-controller-manager-devops-lab condition met
+pod/kube-proxy-d6d2p condition met
+pod/kube-scheduler-devops-lab condition met
+pod/storage-provisioner condition met
+
+$ kubectl get nodes
+NAME         STATUS   ROLES           AGE   VERSION
+devops-lab   Ready    control-plane   34s   v1.37.0
+
+$ kubectl get pods -n kube-system
+NAME                                 READY   STATUS    RESTARTS   AGE
+coredns-559f6c778d-qhjsr             1/1     Running   0          26s
+etcd-devops-lab                      1/1     Running   0          32s
+kindnet-g2hct                        1/1     Running   0          26s
+kube-apiserver-devops-lab            1/1     Running   0          32s
+kube-controller-manager-devops-lab   1/1     Running   0          32s
+kube-proxy-d6d2p                     1/1     Running   0          26s
+kube-scheduler-devops-lab            1/1     Running   0          32s
+storage-provisioner                  1/1     Running   0          31s
+

@@ -1,0 +1,149 @@
+$ kubectl create namespace k8s-basics
+namespace/k8s-basics created
+
+$ kubectl create deployment hello-app --image=nginx:1.27 -n k8s-basics
+deployment.apps/hello-app created
+
+$ kubectl rollout status deployment/hello-app -n k8s-basics --timeout=180s
+Waiting for deployment "hello-app" rollout to finish: 0 of 1 updated replicas are available...
+deployment "hello-app" successfully rolled out
+
+$ kubectl get deployments,replicasets,pods -n k8s-basics -o wide
+NAME                        READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES       SELECTOR
+deployment.apps/hello-app   1/1     1            1           9s    nginx        nginx:1.27   app=hello-app
+
+NAME                                   DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES       SELECTOR
+replicaset.apps/hello-app-6cc74798cd   1         1         1       9s    nginx        nginx:1.27   app=hello-app,pod-template-hash=6cc74798cd
+
+NAME                             READY   STATUS    RESTARTS   AGE   IP           NODE         NOMINATED NODE   READINESS GATES
+pod/hello-app-6cc74798cd-g7hsc   1/1     Running   0          9s    10.244.0.3   devops-lab   <none>           <none>
+
+$ POD=$(kubectl get pod -n k8s-basics -l app=hello-app -o name | head -1); kubectl describe $POD -n k8s-basics | sed -n "1,40p"
+Name:             hello-app-6cc74798cd-g7hsc
+Namespace:        k8s-basics
+Priority:         0
+Service Account:  default
+Node:             devops-lab/192.168.49.2
+Start Time:       Fri, 16 Oct 2026 19:40:44 +0200
+Labels:           app=hello-app
+                  pod-template-hash=6cc74798cd
+Annotations:      <none>
+Status:           Running
+IP:               10.244.0.3
+IPs:
+  IP:           10.244.0.3
+Controlled By:  ReplicaSet/hello-app-6cc74798cd
+Containers:
+  nginx:
+    Container ID:   containerd://10cc350186d96f71cfa1fd97862feed8680727928ff7cb2b2939e3a825f07f24
+    Image:          nginx:1.27
+    Image ID:       docker.io/library/nginx@sha256:6784fb0834aa7dbbe12e3d7471e69c290df3e6ba810dc38b34ae33d3c1c05f7d
+    Port:           <none>
+    Host Port:      <none>
+    State:          Running
+      Started:      Fri, 16 Oct 2026 19:40:53 +0200
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-8c6jh (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-8c6jh:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+
+$ POD=$(kubectl get pod -n k8s-basics -l app=hello-app -o name | head -1); kubectl exec -n k8s-basics $POD -- sh -c "hostname; nginx -v; curl -s -o /dev/null -w \"local HTTP %{http_code}
+\" localhost"
+hello-app-6cc74798cd-g7hsc
+nginx version: nginx/1.27.5
+local HTTP 200
+
+$ kubectl expose deployment hello-app --type=NodePort --port=80 -n k8s-basics
+service/hello-app exposed
+
+$ kubectl get svc,endpointslices -n k8s-basics
+NAME                TYPE       CLUSTER-IP    EXTERNAL-IP   PORT(S)        AGE
+service/hello-app   NodePort   10.99.80.72   <none>        80:32027/TCP   0s
+
+NAME                                             ADDRESSTYPE   PORTS   ENDPOINTS    AGE
+endpointslice.discovery.k8s.io/hello-app-cm66w   IPv4          80      10.244.0.3   0s
+
+$ kubectl run curl-test -n k8s-basics --image=curlimages/curl:8.11.1 --rm -i --restart=Never -- curl -s -o /dev/null -w "service HTTP %{http_code}
+" http://hello-app.k8s-basics.svc.cluster.local
+service HTTP 200
+All commands and output from this session will be recorded in container logs, including credentials and sensitive information passed through the command prompt.
+If you don't see a command prompt, try pressing enter.
+pod "curl-test" deleted from k8s-basics namespace
+
+$ kubectl scale deployment hello-app --replicas=4 -n k8s-basics && kubectl rollout status deployment/hello-app -n k8s-basics --timeout=120s
+deployment.apps/hello-app scaled
+Waiting for deployment "hello-app" rollout to finish: 1 of 4 updated replicas are available...
+Waiting for deployment "hello-app" rollout to finish: 2 of 4 updated replicas are available...
+Waiting for deployment "hello-app" rollout to finish: 3 of 4 updated replicas are available...
+deployment "hello-app" successfully rolled out
+
+$ kubectl get pods -n k8s-basics -o wide
+NAME                         READY   STATUS    RESTARTS   AGE   IP           NODE         NOMINATED NODE   READINESS GATES
+hello-app-6cc74798cd-926r8   1/1     Running   0          0s    10.244.0.6   devops-lab   <none>           <none>
+hello-app-6cc74798cd-cw2f2   1/1     Running   0          0s    10.244.0.7   devops-lab   <none>           <none>
+hello-app-6cc74798cd-g7hsc   1/1     Running   0          17s   10.244.0.3   devops-lab   <none>           <none>
+hello-app-6cc74798cd-ltfjk   1/1     Running   0          0s    10.244.0.5   devops-lab   <none>           <none>
+
+$ kubectl set image deployment/hello-app nginx=nginx:1.28 -n k8s-basics && kubectl rollout status deployment/hello-app -n k8s-basics --timeout=180s
+deployment.apps/hello-app image updated
+Waiting for deployment "hello-app" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 2 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 3 out of 4 new replicas have been updated...
+Waiting for deployment "hello-app" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "hello-app" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "hello-app" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "hello-app" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "hello-app" rollout to finish: 3 of 4 updated replicas are available...
+Waiting for deployment "hello-app" rollout to finish: 3 of 4 updated replicas are available...
+deployment "hello-app" successfully rolled out
+
+$ kubectl get pods -n k8s-basics -o jsonpath="{range .items[*]}{.metadata.name}{\"  \"}{.spec.containers[0].image}{\"
+\"}{end}"
+hello-app-6cc74798cd-g7hsc  nginx:1.27
+hello-app-759bdf67bc-557s2  nginx:1.28
+hello-app-759bdf67bc-ww8gv  nginx:1.28
+hello-app-759bdf67bc-wz7p8  nginx:1.28
+hello-app-759bdf67bc-wzzhv  nginx:1.28
+
+$ kubectl rollout history deployment/hello-app -n k8s-basics
+deployment.apps/hello-app 
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+
+
+$ POD=$(kubectl get pod -n k8s-basics -l app=hello-app -o name | head -1); kubectl logs $POD -n k8s-basics | tail -5
+2026/10/16 17:41:12 [notice] 1#1: signal 17 (SIGCHLD) received from 30
+2026/10/16 17:41:12 [notice] 1#1: signal 17 (SIGCHLD) received from 38
+2026/10/16 17:41:12 [notice] 1#1: worker process 34 exited with code 0
+2026/10/16 17:41:12 [notice] 1#1: worker process 38 exited with code 0
+2026/10/16 17:41:12 [notice] 1#1: exit
+
+$ kubectl scale deployment hello-app --replicas=2 -n k8s-basics && kubectl get pods -n k8s-basics
+deployment.apps/hello-app scaled
+NAME                         READY   STATUS        RESTARTS   AGE
+hello-app-6cc74798cd-g7hsc   0/1     Completed     0          29s
+hello-app-759bdf67bc-557s2   1/1     Running       0          2s
+hello-app-759bdf67bc-ww8gv   1/1     Terminating   0          12s
+hello-app-759bdf67bc-wz7p8   1/1     Terminating   0          12s
+hello-app-759bdf67bc-wzzhv   1/1     Running       0          1s
+
