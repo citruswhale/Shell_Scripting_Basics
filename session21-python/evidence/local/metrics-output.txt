@@ -1,0 +1,39 @@
+$ curl -s http://localhost:8000/metrics | grep -E "^# (HELP|TYPE) (http_|gearloan_)|^(http_requests_total|gearloan_)|http_request_duration_seconds_(count|sum)"
+# HELP http_requests_total Total HTTP requests handled
+# TYPE http_requests_total counter
+http_requests_total{method="GET",path="/ready",status="200"} 52.0
+http_requests_total{method="GET",path="/api/health",status="200"} 1.0
+http_requests_total{method="GET",path="/api/info",status="200"} 1.0
+http_requests_total{method="GET",path="/api/stats",status="200"} 1.0
+# HELP http_requests_created Total HTTP requests handled
+# TYPE http_requests_created gauge
+# HELP http_request_duration_seconds Time spent handling HTTP requests
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_count{method="GET",path="/ready"} 52.0
+http_request_duration_seconds_sum{method="GET",path="/ready"} 0.09320920700702118
+http_request_duration_seconds_count{method="GET",path="/api/health"} 1.0
+http_request_duration_seconds_sum{method="GET",path="/api/health"} 0.0007939169991004746
+http_request_duration_seconds_count{method="GET",path="/api/info"} 1.0
+http_request_duration_seconds_sum{method="GET",path="/api/info"} 0.0007344999994529644
+http_request_duration_seconds_count{method="GET",path="/api/stats"} 1.0
+http_request_duration_seconds_sum{method="GET",path="/api/stats"} 0.009118125000895816
+# HELP http_request_duration_seconds_created Time spent handling HTTP requests
+# TYPE http_request_duration_seconds_created gauge
+# HELP gearloan_loans_created_total Loans created
+# TYPE gearloan_loans_created_total counter
+gearloan_loans_created_total 0.0
+# HELP gearloan_loans_created_created Loans created
+# TYPE gearloan_loans_created_created gauge
+gearloan_loans_created_created 1.7921830317280061e+09
+# HELP gearloan_loans_returned_total Loans returned
+# TYPE gearloan_loans_returned_total counter
+gearloan_loans_returned_total 0.0
+# HELP gearloan_loans_returned_created Loans returned
+# TYPE gearloan_loans_returned_created gauge
+gearloan_loans_returned_created 1.792183031728011e+09
+# HELP gearloan_items_created_total Items added to the inventory
+# TYPE gearloan_items_created_total counter
+gearloan_items_created_total 0.0
+# HELP gearloan_items_created_created Items added to the inventory
+# TYPE gearloan_items_created_created gauge
+gearloan_items_created_created 1.7921830317280142e+09

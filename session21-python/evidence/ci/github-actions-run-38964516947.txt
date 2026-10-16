@@ -1,0 +1,276 @@
+# GitHub Actions run 38964516947 (Capstone GearLoan CI/CD), commit 22d5492
+# https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38964516947
+# excerpt of the real job logs (gh run view 38964516947 --log)
+
+===== job: Backend tests (pytest) | step: Run pytest
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+============================= test session starts ==============================
+platform linux -- Python 3.12.15, pytest-9.1.1, pluggy-1.7.0 -- /opt/hostedtoolcache/Python/3.12.15/x64/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/session21-python/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.15.1
+collecting ... collected 28 items
+tests/test_health.py::test_health_is_ok PASSED                           [  3%]
+tests/test_health.py::test_ready_checks_database PASSED                  [  7%]
+tests/test_health.py::test_ready_returns_503_when_db_is_down PASSED      [ 10%]
+tests/test_health.py::test_info_shows_name_and_version PASSED            [ 14%]
+tests/test_health.py::test_metrics_use_route_templates PASSED            [ 17%]
+tests/test_health.py::test_loan_counters_go_up PASSED                    [ 21%]
+tests/test_items.py::test_create_and_get_item PASSED                     [ 25%]
+tests/test_items.py::test_create_item_validation_errors PASSED           [ 28%]
+tests/test_items.py::test_serial_number_must_be_unique PASSED            [ 32%]
+tests/test_items.py::test_update_item PASSED                             [ 35%]
+tests/test_items.py::test_missing_item_returns_404 PASSED                [ 39%]
+tests/test_items.py::test_delete_item PASSED                             [ 42%]
+tests/test_items.py::test_search_and_filters PASSED                      [ 46%]
+tests/test_items.py::test_items_persist_across_sessions PASSED           [ 50%]
+tests/test_loans.py::test_lend_item_marks_it_on_loan PASSED              [ 53%]
+tests/test_loans.py::test_loan_validation PASSED                         [ 57%]
+tests/test_loans.py::test_loan_for_missing_item_is_404 PASSED            [ 60%]
+tests/test_loans.py::test_cannot_lend_item_twice PASSED                  [ 64%]
+tests/test_loans.py::test_cannot_lend_item_in_maintenance PASSED         [ 67%]
+tests/test_loans.py::test_borrower_limited_to_three_active_loans PASSED  [ 71%]
+tests/test_loans.py::test_return_flow PASSED                             [ 75%]
+tests/test_loans.py::test_damaged_return_sends_item_to_maintenance PASSED [ 78%]
+tests/test_loans.py::test_cannot_delete_item_with_active_loan PASSED     [ 82%]
+tests/test_loans.py::test_delete_loan_only_when_returned PASSED          [ 85%]
+tests/test_loans.py::test_overdue_status_and_filters PASSED              [ 89%]
+tests/test_loans.py::test_stats PASSED                                   [ 92%]
+tests/test_migrations.py::test_migration_created_expected_tables PASSED  [ 96%]
+tests/test_migrations.py::test_models_match_migration PASSED             [100%]
+- generated xml file: /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/session21-python/backend/reports/junit.xml -
+============================== 28 passed in 1.20s ==============================
+
+===== job: Frontend build (Vite) | step: Build
+> gearloan-frontend@1.0.0 build
+> vite build
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 26 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.55 kB │ gzip:  0.33 kB
+dist/assets/index-pUHJLZ9G.css    7.06 kB │ gzip:  2.14 kB
+dist/assets/index-XPPm-h_w.js   156.83 kB │ gzip: 50.32 kB
+✓ built in 106ms
+dist:
+total 20
+drwxr-xr-x 3 runner runner 4096 Oct 16 20:45 .
+drwxr-xr-x 7 runner runner 4096 Oct 16 20:45 ..
+drwxr-xr-x 2 runner runner 4096 Oct 16 20:45 assets
+-rw-r--r-- 1 runner runner  358 Oct 16 20:45 favicon.svg
+-rw-r--r-- 1 runner runner  554 Oct 16 20:45 index.html
+
+===== job: SAST (Bandit) | step: Bandit gate
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	using config: ../security/bandit.yaml
+[main]	INFO	running on Python 3.12.15
+Run started:2026-10-16 20:45:29.814542+00:00
+Test results:
+	No issues identified.
+Code scanned:
+	Total lines of code: 557
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+Files skipped (0):
+
+===== job: SCA (pip-audit, npm audit) | step: pip-audit gate
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+No known vulnerabilities found
+No known vulnerabilities found
+
+===== job: SCA (pip-audit, npm audit) | step: npm audit gate
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+found 0 vulnerabilities
+
+===== job: Secret scan (Gitleaks) | step: Gitleaks gate
+    ○
+    │╲
+    │ ○
+    ○ ░
+    ░    gitleaks
+8:45PM INF 37 commits scanned.
+8:45PM INF scanned ~829926 bytes (829.93 KB) in 224ms
+8:45PM INF no leaks found
+
+===== job: Helm and Terraform checks | step: helm lint
+==> Linting session21-python/helm/gearloan
+[INFO] Chart.yaml: icon is recommended
+1 chart(s) linted, 0 chart(s) failed
+==> Linting session21-python/helm/gearloan
+[INFO] Chart.yaml: icon is recommended
+1 chart(s) linted, 0 chart(s) failed
+==> Linting session21-python/helm/gearloan
+[INFO] Chart.yaml: icon is recommended
+1 chart(s) linted, 0 chart(s) failed
+
+===== job: Helm and Terraform checks | step: terraform init and validate
+Initializing modules...
+Downloading registry.terraform.io/terraform-aws-modules/eks/aws 21.29.0 for eks...
+- eks in .terraform/modules/eks
+Downloading registry.terraform.io/terraform-aws-modules/vpc/aws 6.7.3 for vpc...
+- vpc in .terraform/modules/vpc
+- eks.fargate_profile in .terraform/modules/eks/modules/fargate-profile
+Downloading registry.terraform.io/terraform-aws-modules/kms/aws 4.0.0 for eks.kms...
+- eks.kms in .terraform/modules/eks.kms
+- eks.eks_managed_node_group in .terraform/modules/eks/modules/eks-managed-node-group
+- eks.self_managed_node_group in .terraform/modules/eks/modules/self-managed-node-group
+- eks.eks_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+- eks.self_managed_node_group.user_data in .terraform/modules/eks/modules/_user_data
+Initializing provider plugins...
+
+===== job: Image scan (Trivy, backend) | step: Trivy image gate
+Report Summary
+┌──────────────────────────────────────────────────────────────────────────────────┬────────────┬─────────────────┐
+│                                      Target                                      │    Type    │ Vulnerabilities │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/images/backend.- │   debian   │        0        │
+│ tar (debian 13.7)                                                                │            │                 │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/alembic-1.20.0.dist-info/METADATA          │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/annotated_doc-0.0.5.dist-info/METADATA     │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/annotated_types-0.8.0.dist-info/METADATA   │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/anyio-4.15.1.dist-info/METADATA            │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/click-8.5.0.dist-info/METADATA             │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/dnspython-2.9.0.dist-info/METADATA         │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/email_validator-2.3.0.dist-info/METADATA   │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/fastapi-0.143.3.dist-info/METADATA         │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/h11-0.16.0.dist-info/METADATA              │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/httptools-0.9.0.dist-info/METADATA         │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/idna-3.20.dist-info/METADATA               │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/mako-1.4.3.dist-info/METADATA              │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/markupsafe-3.0.4.dist-info/METADATA        │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/opentelemetry_api-1.45.1.dist-info/METADA- │ python-pkg │        0        │
+│ TA                                                                               │            │                 │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/pip-25.0.1.dist-info/METADATA              │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/prometheus_client-0.26.0.dist-info/METADA- │ python-pkg │        0        │
+│ TA                                                                               │            │                 │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/psycopg-3.3.6.dist-info/METADATA           │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/psycopg_binary-3.3.6.dist-info/METADATA    │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/pydantic-2.14.1.dist-info/METADATA         │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/pydantic_core-2.50.1.dist-info/METADATA    │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/pydantic_settings-2.16.0.dist-info/METADA- │ python-pkg │        0        │
+│ TA                                                                               │            │                 │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/python_dotenv-1.2.4.dist-info/METADATA     │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/pyyaml-6.0.3.dist-info/METADATA            │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/sqlalchemy-2.1.4.dist-info/METADATA        │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/starlette-1.8.0.dist-info/METADATA         │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+
+===== job: Image scan (Trivy, frontend) | step: Trivy image gate
+Report Summary
+┌──────────────────────────────────────────────────────────────────────────────────┬────────┬─────────────────┐
+│                                      Target                                      │  Type  │ Vulnerabilities │
+├──────────────────────────────────────────────────────────────────────────────────┼────────┼─────────────────┤
+│ /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/images/frontend- │ alpine │        0        │
+│ .tar (alpine 3.24.2)                                                             │        │                 │
+└──────────────────────────────────────────────────────────────────────────────────┴────────┴─────────────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+
+===== job: Security gate | step: All checks passed
+
+===== job: Deploy test (kind + Helm) | step: Show cluster state
+NAME                                     READY   STATUS    RESTARTS   AGE   IP            NODE                        NOMINATED NODE   READINESS GATES
+pod/gearloan-backend-69b4854745-fkc6g    1/1     Running   0          15s   10.244.0.10   gearloan-ci-control-plane   <none>           <none>
+pod/gearloan-backend-69b4854745-p8787    1/1     Running   0          30s   10.244.0.6    gearloan-ci-control-plane   <none>           <none>
+pod/gearloan-frontend-7d7975d488-b952l   1/1     Running   0          30s   10.244.0.5    gearloan-ci-control-plane   <none>           <none>
+pod/gearloan-frontend-7d7975d488-nnbct   1/1     Running   0          15s   10.244.0.9    gearloan-ci-control-plane   <none>           <none>
+pod/gearloan-postgres-0                  1/1     Running   0          30s   10.244.0.8    gearloan-ci-control-plane   <none>           <none>
+NAME                        TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE   SELECTOR
+service/gearloan-backend    ClusterIP   10.96.57.11   <none>        8000/TCP   30s   app.kubernetes.io/component=backend,app.kubernetes.io/instance=gearloan,app.kubernetes.io/name=gearloan
+service/gearloan-frontend   ClusterIP   10.96.97.64   <none>        8080/TCP   30s   app.kubernetes.io/component=frontend,app.kubernetes.io/instance=gearloan,app.kubernetes.io/name=gearloan
+service/gearloan-postgres   ClusterIP   None          <none>        5432/TCP   30s   app.kubernetes.io/component=postgres,app.kubernetes.io/instance=gearloan,app.kubernetes.io/name=gearloan
+NAME                                             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE   VOLUMEMODE
+persistentvolumeclaim/data-gearloan-postgres-0   Bound    pvc-4b7de46c-bf78-43bf-853f-e1e1c3e23bba   1Gi        RWO            standard       <unset>                 30s   Filesystem
+gearloan-backend-69b4854745-fkc6g	ghcr.io/citruswhale/gearloan-backend:22d54920601f1d431e060a19afa0571156f0d6b6
+gearloan-backend-69b4854745-p8787	ghcr.io/citruswhale/gearloan-backend:22d54920601f1d431e060a19afa0571156f0d6b6
+gearloan-frontend-7d7975d488-b952l	ghcr.io/citruswhale/gearloan-frontend:22d54920601f1d431e060a19afa0571156f0d6b6
+gearloan-frontend-7d7975d488-nnbct	ghcr.io/citruswhale/gearloan-frontend:22d54920601f1d431e060a19afa0571156f0d6b6
+gearloan-postgres-0	postgres:17-alpine
+
+===== job: GitOps update (values-eks.yaml) | step: Write the new image tags
+diff --git a/session21-python/helm/gearloan/values-eks.yaml b/session21-python/helm/gearloan/values-eks.yaml
+index 5416005..78f6f40 100644
+--- a/session21-python/helm/gearloan/values-eks.yaml
++++ b/session21-python/helm/gearloan/values-eks.yaml
+@@ -13,13 +13,13 @@ image:
+
+===== job: GitOps update (values-eks.yaml) | step: Commit and push (retry if master moved)
+
+===== job: Deploy test (kind + Helm) | step: Smoke test
+GET /            -> GearLoan page OK
+GET /api/health  -> {"status":"ok"}
+GET /api/ready   -> {"status":"ready"}
+GET /api/info    -> {"name":"GearLoan","version":"1.0.0-22d5492"}
+POST /api/items  -> id=1 status=available
+POST /api/loans  -> id=1 status=active
+POST /api/loans/1/return -> status=returned
+
+===== job: Push images to GHCR | step: Push (tags and digests)
+The push refers to repository [ghcr.io/citruswhale/gearloan-backend]
+22d54920601f1d431e060a19afa0571156f0d6b6: digest: sha256:f8f286a4dc8ab5a8798c8a79aa744ceb74ac8e08557d1ef20759fb94c588ae21 size: 2408
+The push refers to repository [ghcr.io/citruswhale/gearloan-backend]
+22d5492: digest: sha256:f8f286a4dc8ab5a8798c8a79aa744ceb74ac8e08557d1ef20759fb94c588ae21 size: 2408
+The push refers to repository [ghcr.io/citruswhale/gearloan-backend]
+latest: digest: sha256:f8f286a4dc8ab5a8798c8a79aa744ceb74ac8e08557d1ef20759fb94c588ae21 size: 2408
+The push refers to repository [ghcr.io/citruswhale/gearloan-frontend]
+22d54920601f1d431e060a19afa0571156f0d6b6: digest: sha256:81c5352011e996739c013fea3fd622ab82f856f3eae0b175f55b0fb20e503954 size: 2614
+The push refers to repository [ghcr.io/citruswhale/gearloan-frontend]
+22d5492: digest: sha256:81c5352011e996739c013fea3fd622ab82f856f3eae0b175f55b0fb20e503954 size: 2614
+The push refers to repository [ghcr.io/citruswhale/gearloan-frontend]
+latest: digest: sha256:81c5352011e996739c013fea3fd622ab82f856f3eae0b175f55b0fb20e503954 size: 2614
