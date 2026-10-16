@@ -1,0 +1,27 @@
+$ kubectl apply -f 04-troubleshooting/missing-config-pod.yaml; sleep 8; kubectl get pod missing-config -n s12
+pod/missing-config created
+NAME             READY   STATUS                       RESTARTS   AGE
+missing-config   0/1     CreateContainerConfigError   0          8s
+
+$ kubectl describe pod missing-config -n s12 | sed -n "/Events:/,\$p"
+Events:
+  Type     Reason     Age              From               Message
+  ----     ------     ----             ----               -------
+  Normal   Scheduled  8s               default-scheduler  Successfully assigned s12/missing-config to devops-lab
+  Normal   Pulled     7s (x2 over 8s)  kubelet            spec.containers{app}: Container image "busybox:1.36" already present on machine and can be accessed by the pod
+  Warning  Failed     7s (x2 over 8s)  kubelet            spec.containers{app}: Error: couldn't find key FEATURE_FLAGS in ConfigMap s12/app-config
+
+$ kubectl get configmap app-config -n s12 -o jsonpath="{.data}" | tr , "
+"
+{"APP_ENV":"staging"
+"APP_NAME":"GearLoan"
+"LOG_LEVEL":"debug"
+"MAX_LOAN_DAYS":"14"
+"settings.ini":"[loans]\nmax_items_per_person = 5\noverdue_reminder_hours = 12\n"}
+$ kubectl patch configmap app-config -n s12 --type merge -p "{\"data\":{\"FEATURE_FLAGS\":\"late-fees,email-reminders\"}}"; kubectl wait -n s12 --for=condition=Ready pod/missing-config --timeout=90s; kubectl get pod missing-config -n s12; kubectl logs missing-config -n s12
+configmap/app-config patched
+pod/missing-config condition met
+NAME             READY   STATUS    RESTARTS   AGE
+missing-config   1/1     Running   0          17s
+FEATURE_FLAGS=late-fees,email-reminders
+

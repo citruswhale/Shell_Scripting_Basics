@@ -1,0 +1,21 @@
+# an "app" that connects to the database using the password from Secret pg-client
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-client
+  namespace: s12
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: client
+          image: postgres:17-alpine
+          command: ["sh", "-c", "psql -h postgres -U gearloan -d gearloan -c 'select current_user, version();'"]
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-client
+                  key: PGPASSWORD

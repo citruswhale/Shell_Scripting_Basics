@@ -1,0 +1,87 @@
+$ kubectl get pods,svc -n ingress-nginx; kubectl get ingressclass
+NAME                                           READY   STATUS      RESTARTS        AGE
+pod/ingress-nginx-admission-create-zbwk2       0/1     Completed   0               3m28s
+pod/ingress-nginx-admission-patch-nt6xc        0/1     Completed   1 (3m22s ago)   3m28s
+pod/ingress-nginx-controller-d7cd8c989-n5khv   1/1     Running     0               3m28s
+
+NAME                                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+service/ingress-nginx-controller             NodePort    10.110.179.74   <none>        80:32082/TCP,443:30227/TCP   3m28s
+service/ingress-nginx-controller-admission   ClusterIP   10.103.169.96   <none>        443/TCP                      3m28s
+NAME              CONTROLLER             PARAMETERS   AGE
+nginx (default)   k8s.io/ingress-nginx   <none>       3m28s
+
+$ kubectl apply -f 03-ingress/frontend.yaml -f 03-ingress/api.yaml -f 03-ingress/admin.yaml && kubectl rollout status deploy/frontend -n s12 && kubectl rollout status deploy/api -n s12 && kubectl rollout status deploy/admin -n s12
+deployment.apps/frontend created
+service/frontend created
+deployment.apps/api created
+service/api created
+deployment.apps/admin created
+service/admin created
+Waiting for deployment "frontend" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "frontend" rollout to finish: 1 of 2 updated replicas are available...
+deployment "frontend" successfully rolled out
+deployment "api" successfully rolled out
+deployment "admin" successfully rolled out
+
+$ kubectl get deploy,svc -n s12
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/admin      2/2     2            2           1s
+deployment.apps/api        2/2     2            2           1s
+deployment.apps/frontend   2/2     2            2           1s
+
+NAME               TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+service/admin      ClusterIP   10.111.162.91    <none>        80/TCP    1s
+service/api        ClusterIP   10.110.181.92    <none>        80/TCP    1s
+service/frontend   ClusterIP   10.105.152.180   <none>        80/TCP    1s
+
+$ kubectl apply -f 03-ingress/ingress.yaml; for i in $(seq 1 30); do A=$(kubectl get ingress gearloan -n s12 -o jsonpath="{.status.loadBalancer.ingress[0].ip}"); [ -n "$A" ] && break; sleep 2; done; kubectl get ingress gearloan -n s12
+ingress.networking.k8s.io/gearloan created
+NAME       CLASS   HOSTS                                 ADDRESS        PORTS   AGE
+gearloan   nginx   gearloan.local,admin.gearloan.local   192.168.49.2   80      51s
+
+$ kubectl describe ingress gearloan -n s12 | sed -n "/Rules:/,/Annotations/p"
+Rules:
+  Host                  Path  Backends
+  ----                  ----  --------
+  gearloan.local        
+                        /api   api:80 (10.244.0.100:8080,10.244.0.99:8080)
+                        /      frontend:80 (10.244.0.97:8080,10.244.0.98:8080)
+  admin.gearloan.local  
+                        /   admin:80 (10.244.0.101:8080,10.244.0.102:8080)
+Annotations:            <none>
+
+$ kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8088:80     # in another terminal
+Forwarding from 127.0.0.1:8088 -> 80
+Forwarding from [::1]:8088 -> 80
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8088/
+GearLoan frontend (home page)
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8088/api
+GearLoan API - list of items
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8088/api/items/42
+GearLoan API - list of items
+
+$ curl -s -H "Host: gearloan.local" http://127.0.0.1:8088/some/page
+GearLoan frontend (home page)
+
+$ curl -s -H "Host: admin.gearloan.local" http://127.0.0.1:8088/
+GearLoan admin site
+
+$ curl -s -o /dev/null -w "unknown host -> HTTP %{http_code}
+" -H "Host: something-else.local" http://127.0.0.1:8088/
+unknown host -> HTTP 404
+
+$ curl -s --resolve gearloan.local:8088:127.0.0.1 http://gearloan.local:8088/api
+GearLoan API - list of items
+
+$ kubectl logs -n ingress-nginx deploy/ingress-nginx-controller --tail=7 | cut -c1-220
+I1016 18:33:20.120287       7 event.go:377] Event(v1.ObjectReference{Kind:"Ingress", Namespace:"s12", Name:"gearloan", UID:"43d26f61-1b0c-4617-a45c-b05faef1b76a", APIVersion:"networking.k8s.io/v1", ResourceVersion:"5924"
+127.0.0.1 - - [16/Oct/2026:18:33:24 +0000] "GET / HTTP/1.1" 200 30 "-" "curl/8.7.1" 77 0.001 [s12-frontend-80] [] 10.244.0.97:8080 30 0.002 200 69fd19ee7841cb5ee8cdd821c3995178
+127.0.0.1 - - [16/Oct/2026:18:33:24 +0000] "GET /api HTTP/1.1" 200 29 "-" "curl/8.7.1" 80 0.001 [s12-api-80] [] 10.244.0.100:8080 29 0.001 200 e71100a55923a29f9feeef4b38014925
+127.0.0.1 - - [16/Oct/2026:18:33:25 +0000] "GET /api/items/42 HTTP/1.1" 200 29 "-" "curl/8.7.1" 89 0.001 [s12-api-80] [] 10.244.0.99:8080 29 0.001 200 896d9d52e6284723d4b92ea258a8c2a1
+127.0.0.1 - - [16/Oct/2026:18:33:25 +0000] "GET /some/page HTTP/1.1" 200 30 "-" "curl/8.7.1" 86 0.000 [s12-frontend-80] [] 10.244.0.98:8080 30 0.001 200 822d426519edda1753419c493ba80a6b
+127.0.0.1 - - [16/Oct/2026:18:33:25 +0000] "GET / HTTP/1.1" 200 20 "-" "curl/8.7.1" 83 0.000 [s12-admin-80] [] 10.244.0.101:8080 20 0.001 200 93e892d1a78d55339173754a076ad571
+127.0.0.1 - - [16/Oct/2026:18:33:25 +0000] "GET /api HTTP/1.1" 200 29 "-" "curl/8.7.1" 85 0.001 [s12-api-80] [] 10.244.0.100:8080 29 0.000 200 0f2db125d0d4163449517b9e866980a6
+

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin
+  namespace: s12
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: admin
+  template:
+    metadata:
+      labels:
+        app: admin
+    spec:
+      containers:
+        - name: admin
+          image: hashicorp/http-echo:1.0
+          args: ["-listen=:8080", "-text=GearLoan admin site"]
+          ports:
+            - containerPort: 8080
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 50m, memory: 32Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin
+  namespace: s12
+spec:
+  selector:
+    app: admin
+  ports:
+    - port: 80
+      targetPort: 8080

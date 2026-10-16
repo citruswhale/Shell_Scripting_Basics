@@ -1,0 +1,17 @@
+# BROKEN on purpose: asks for a ConfigMap key that does not exist
+apiVersion: v1
+kind: Pod
+metadata:
+  name: missing-config
+  namespace: s12
+spec:
+  containers:
+    - name: app
+      image: busybox:1.36
+      command: ["sh", "-c", "echo FEATURE_FLAGS=$FEATURE_FLAGS; sleep 3600"]
+      env:
+        - name: FEATURE_FLAGS
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: FEATURE_FLAGS

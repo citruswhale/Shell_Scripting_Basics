@@ -1,0 +1,10 @@
+# Session 12 troubleshooting lab: these Secret YAMLs hold a made-up demo password (labPass123)
+# on purpose, to show the base64 trailing-newline bug. They are not real credentials.
+1729d87a67629e14e28082b67d91fcbb9fd5f28f:submissions/12-kubernetes-config-ingress/04-troubleshooting/postgres.yaml:kubernetes-secret-yaml:3
+1729d87a67629e14e28082b67d91fcbb9fd5f28f:submissions/12-kubernetes-config-ingress/04-troubleshooting/fixed-client-secret.yaml:kubernetes-secret-yaml:3
+1729d87a67629e14e28082b67d91fcbb9fd5f28f:submissions/12-kubernetes-config-ingress/04-troubleshooting/broken-client-secret.yaml:kubernetes-secret-yaml:4
+1729d87a67629e14e28082b67d91fcbb9fd5f28f:submissions/12-kubernetes-config-ingress/04-troubleshooting/broken-client-secret.yaml:generic-api-key:10
+submissions/12-kubernetes-config-ingress/04-troubleshooting/postgres.yaml:kubernetes-secret-yaml:3
+submissions/12-kubernetes-config-ingress/04-troubleshooting/fixed-client-secret.yaml:kubernetes-secret-yaml:3
+submissions/12-kubernetes-config-ingress/04-troubleshooting/broken-client-secret.yaml:kubernetes-secret-yaml:4
+submissions/12-kubernetes-config-ingress/04-troubleshooting/broken-client-secret.yaml:generic-api-key:10
