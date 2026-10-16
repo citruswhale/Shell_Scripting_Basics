@@ -4,7 +4,7 @@ $ aws sts get-caller-identity --query "{Account:Account,Arn:Arn}" --output table
 +---------------+---------------------------------------------+
 |    Account    |                     Arn                     |
 +---------------+---------------------------------------------+
-|  451432063943 |  arn:aws:iam::451432063943:user/devops-lab  |
+|  <aws-account-id> |  arn:aws:iam::<aws-account-id>:user/devops-lab  |
 +---------------+---------------------------------------------+
 
 $ terraform version

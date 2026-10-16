@@ -631,7 +631,7 @@ $ aws ec2 describe-instances --instance-ids $(terraform output -raw instance_id)
 |  IMDSv2   |  required                                                              |
 |  Id       |  i-02ff785a3e916d547                                                   |
 |  PrivateIp|  10.20.1.160                                                           |
-|  Profile  |  arn:aws:iam::451432063943:instance-profile/gearloan-s19-web-profile   |
+|  Profile  |  arn:aws:iam::<aws-account-id>:instance-profile/gearloan-s19-web-profile   |
 |  PublicIp |  35.154.177.7                                                          |
 |  State    |  running                                                               |
 |  Subnet   |  subnet-04d0e22cbbeb1001d                                              |
@@ -781,7 +781,7 @@ Terraform will perform the following actions:
 
   # aws_iam_instance_profile.web will be destroyed
   - resource "aws_iam_instance_profile" "web" {
-      - arn         = "arn:aws:iam::451432063943:instance-profile/gearloan-s19-web-profile" -> null
+      - arn         = "arn:aws:iam::<aws-account-id>:instance-profile/gearloan-s19-web-profile" -> null
       - create_date = "2026-10-16T20:59:28Z" -> null
       - id          = "gearloan-s19-web-profile" -> null
       - name        = "gearloan-s19-web-profile" -> null
@@ -799,7 +799,7 @@ Terraform will perform the following actions:
 
   # aws_iam_role.web will be destroyed
   - resource "aws_iam_role" "web" {
-      - arn                   = "arn:aws:iam::451432063943:role/gearloan-s19-web-role" -> null
+      - arn                   = "arn:aws:iam::<aws-account-id>:role/gearloan-s19-web-role" -> null
       - assume_role_policy    = jsonencode(
             {
               - Statement = [
@@ -884,7 +884,7 @@ Terraform will perform the following actions:
   # aws_instance.web will be destroyed
   - resource "aws_instance" "web" {
       - ami                                  = "ami-04394a3a96907e9ec" -> null
-      - arn                                  = "arn:aws:ec2:ap-south-1:451432063943:instance/i-02ff785a3e916d547" -> null
+      - arn                                  = "arn:aws:ec2:ap-south-1:<aws-account-id>:instance/i-02ff785a3e916d547" -> null
       - associate_public_ip_address          = true -> null
       - availability_zone                    = "ap-south-1a" -> null
       - disable_api_stop                     = false -> null
@@ -998,7 +998,7 @@ Terraform will perform the following actions:
           - device_name           = "/dev/xvda" -> null
           - encrypted             = true -> null
           - iops                  = 3000 -> null
-          - kms_key_id            = "arn:aws:kms:ap-south-1:451432063943:key/99939211-9daa-4294-a44e-0fc960e79fc6" -> null
+          - kms_key_id            = "arn:aws:kms:ap-south-1:<aws-account-id>:key/99939211-9daa-4294-a44e-0fc960e79fc6" -> null
           - tags                  = {} -> null
           - tags_all              = {
               - "ManagedBy" = "terraform"
@@ -1014,9 +1014,9 @@ Terraform will perform the following actions:
 
   # aws_internet_gateway.main will be destroyed
   - resource "aws_internet_gateway" "main" {
-      - arn      = "arn:aws:ec2:ap-south-1:451432063943:internet-gateway/igw-0c816d75c710b2b0e" -> null
+      - arn      = "arn:aws:ec2:ap-south-1:<aws-account-id>:internet-gateway/igw-0c816d75c710b2b0e" -> null
       - id       = "igw-0c816d75c710b2b0e" -> null
-      - owner_id = "451432063943" -> null
+      - owner_id = "<aws-account-id>" -> null
       - region   = "ap-south-1" -> null
       - tags     = {
           - "Name" = "gearloan-s19-igw"
@@ -1032,9 +1032,9 @@ Terraform will perform the following actions:
 
   # aws_route_table.public will be destroyed
   - resource "aws_route_table" "public" {
-      - arn              = "arn:aws:ec2:ap-south-1:451432063943:route-table/rtb-0c014b09f0254fd68" -> null
+      - arn              = "arn:aws:ec2:ap-south-1:<aws-account-id>:route-table/rtb-0c014b09f0254fd68" -> null
       - id               = "rtb-0c014b09f0254fd68" -> null
-      - owner_id         = "451432063943" -> null
+      - owner_id         = "<aws-account-id>" -> null
       - propagating_vgws = [] -> null
       - region           = "ap-south-1" -> null
       - route            = [
@@ -1173,7 +1173,7 @@ Terraform will perform the following actions:
 
   # aws_security_group.web will be destroyed
   - resource "aws_security_group" "web" {
-      - arn                    = "arn:aws:ec2:ap-south-1:451432063943:security-group/sg-0cbdf1391963fe351" -> null
+      - arn                    = "arn:aws:ec2:ap-south-1:<aws-account-id>:security-group/sg-0cbdf1391963fe351" -> null
       - description            = "HTTP from anywhere, SSH only from admin_cidr if set" -> null
       - egress                 = [
           - {
@@ -1207,7 +1207,7 @@ Terraform will perform the following actions:
             },
         ] -> null
       - name                   = "gearloan-s19-web-sg" -> null
-      - owner_id               = "451432063943" -> null
+      - owner_id               = "<aws-account-id>" -> null
       - region                 = "ap-south-1" -> null
       - revoke_rules_on_delete = false -> null
       - tags                   = {
@@ -1225,7 +1225,7 @@ Terraform will perform the following actions:
 
   # aws_subnet.public will be destroyed
   - resource "aws_subnet" "public" {
-      - arn                                            = "arn:aws:ec2:ap-south-1:451432063943:subnet/subnet-04d0e22cbbeb1001d" -> null
+      - arn                                            = "arn:aws:ec2:ap-south-1:<aws-account-id>:subnet/subnet-04d0e22cbbeb1001d" -> null
       - assign_ipv6_address_on_creation                = false -> null
       - availability_zone                              = "ap-south-1a" -> null
       - availability_zone_id                           = "aps1-az1" -> null
@@ -1238,7 +1238,7 @@ Terraform will perform the following actions:
       - ipv6_native                                    = false -> null
       - map_customer_owned_ip_on_launch                = false -> null
       - map_public_ip_on_launch                        = true -> null
-      - owner_id                                       = "451432063943" -> null
+      - owner_id                                       = "<aws-account-id>" -> null
       - private_dns_hostname_type_on_launch            = "ip-name" -> null
       - region                                         = "ap-south-1" -> null
       - tags                                           = {
@@ -1256,7 +1256,7 @@ Terraform will perform the following actions:
 
   # aws_vpc.main will be destroyed
   - resource "aws_vpc" "main" {
-      - arn                                  = "arn:aws:ec2:ap-south-1:451432063943:vpc/vpc-0a011aca7565797f7" -> null
+      - arn                                  = "arn:aws:ec2:ap-south-1:<aws-account-id>:vpc/vpc-0a011aca7565797f7" -> null
       - assign_generated_ipv6_cidr_block     = false -> null
       - cidr_block                           = "10.20.0.0/16" -> null
       - default_network_acl_id               = "acl-01ce4c28a1f6244f2" -> null
@@ -1270,7 +1270,7 @@ Terraform will perform the following actions:
       - instance_tenancy                     = "default" -> null
       - ipv6_netmask_length                  = 0 -> null
       - main_route_table_id                  = "rtb-0a9b4d6001ef27e4a" -> null
-      - owner_id                             = "451432063943" -> null
+      - owner_id                             = "<aws-account-id>" -> null
       - region                               = "ap-south-1" -> null
       - tags                                 = {
           - "Name" = "gearloan-s19-vpc"
