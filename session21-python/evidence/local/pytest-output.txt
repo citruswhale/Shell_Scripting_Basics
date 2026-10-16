@@ -1,0 +1,40 @@
+$ TEST_DATABASE_URL=postgresql+psycopg://gearloan:gearloan@localhost:5433/gearloan_test pytest -v   (2026-10-16 21:24:22 CEST)
+============================= test session starts ==============================
+platform darwin -- Python 3.12.15, pytest-9.1.1, pluggy-1.7.0 -- /Users/srinidhinarendran/DevOps SST/Shell_Scripting_Basics/session21-python/backend/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/srinidhinarendran/DevOps SST/Shell_Scripting_Basics/session21-python/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.15.1
+collecting ... collected 28 items
+
+tests/test_health.py::test_health_is_ok PASSED                           [  3%]
+tests/test_health.py::test_ready_checks_database PASSED                  [  7%]
+tests/test_health.py::test_ready_returns_503_when_db_is_down PASSED      [ 10%]
+tests/test_health.py::test_info_shows_name_and_version PASSED            [ 14%]
+tests/test_health.py::test_metrics_use_route_templates PASSED            [ 17%]
+tests/test_health.py::test_loan_counters_go_up PASSED                    [ 21%]
+tests/test_items.py::test_create_and_get_item PASSED                     [ 25%]
+tests/test_items.py::test_create_item_validation_errors PASSED           [ 28%]
+tests/test_items.py::test_serial_number_must_be_unique PASSED            [ 32%]
+tests/test_items.py::test_update_item PASSED                             [ 35%]
+tests/test_items.py::test_missing_item_returns_404 PASSED                [ 39%]
+tests/test_items.py::test_delete_item PASSED                             [ 42%]
+tests/test_items.py::test_search_and_filters PASSED                      [ 46%]
+tests/test_items.py::test_items_persist_across_sessions PASSED           [ 50%]
+tests/test_loans.py::test_lend_item_marks_it_on_loan PASSED              [ 53%]
+tests/test_loans.py::test_loan_validation PASSED                         [ 57%]
+tests/test_loans.py::test_loan_for_missing_item_is_404 PASSED            [ 60%]
+tests/test_loans.py::test_cannot_lend_item_twice PASSED                  [ 64%]
+tests/test_loans.py::test_cannot_lend_item_in_maintenance PASSED         [ 67%]
+tests/test_loans.py::test_borrower_limited_to_three_active_loans PASSED  [ 71%]
+tests/test_loans.py::test_return_flow PASSED                             [ 75%]
+tests/test_loans.py::test_damaged_return_sends_item_to_maintenance PASSED [ 78%]
+tests/test_loans.py::test_cannot_delete_item_with_active_loan PASSED     [ 82%]
+tests/test_loans.py::test_delete_loan_only_when_returned PASSED          [ 85%]
+tests/test_loans.py::test_overdue_status_and_filters PASSED              [ 89%]
+tests/test_loans.py::test_stats PASSED                                   [ 92%]
+tests/test_migrations.py::test_migration_created_expected_tables PASSED  [ 96%]
+tests/test_migrations.py::test_models_match_migration PASSED             [100%]
+
+============================== 28 passed in 0.49s ==============================

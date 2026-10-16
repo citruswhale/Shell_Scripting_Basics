@@ -1,0 +1,90 @@
+GearLoan API smoke test - 2026-10-16 21:24:16 CEST
+
+$ curl -s -o /dev/null -w 'HTTP %{http_code}  content-type: %{content_type}\n' http://localhost:3000/ && curl -s http://localhost:3000/ | grep -o '<title>.*</title>'
+HTTP 200  content-type: text/html
+<title>GearLoan</title>
+
+
+$ curl -s -w '  HTTP %{http_code}' http://localhost:3000/api/health
+{"status":"ok"}  HTTP 200
+
+$ curl -s -w '  HTTP %{http_code}' http://localhost:3000/api/ready
+{"status":"ready"}  HTTP 200
+
+$ curl -s -w '  HTTP %{http_code}' http://localhost:3000/api/info
+{"name":"GearLoan","version":"1.0.0"}  HTTP 200
+
+$ curl -s -w '  HTTP %{http_code}' -X POST http://localhost:3000/api/items -H 'Content-Type: application/json' -d '{"name":"Sony ZV-E10","category":"camera","serial_number":"ZVE10-0042","condition":"good"}'
+{"id":1,"name":"Sony ZV-E10","category":"camera","serial_number":"ZVE10-0042","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:24:17.014008Z","updated_at":"2026-10-16T19:24:17.014008Z"}  HTTP 201
+
+$ curl -s -w '  HTTP %{http_code}' -X POST http://localhost:3000/api/items -H 'Content-Type: application/json' -d '{"name":"X","category":"drone"}'
+{"detail":[{"type":"string_too_short","loc":["body","name"],"msg":"String should have at least 2 characters","input":"X","ctx":{"min_length":2}},{"type":"literal_error","loc":["body","category"],"msg":"Input should be 'camera', 'laptop', 'audio', 'lighting', 'tripod' or 'other'","input":"drone","ctx":{"expected":"'camera', 'laptop', 'audio', 'lighting', 'tripod' or 'other'"}}]}  HTTP 422
+
+$ curl -s -w '  HTTP %{http_code}' -X POST http://localhost:3000/api/loans -H 'Content-Type: application/json' -d '{"item_id":1,"borrower_name":"Srinidhi Narendran","borrower_email":"srinidhi@college.edu","due_date":"2026-10-23"}'
+{"id":1,"item_id":1,"item_name":"Sony ZV-E10","borrower_name":"Srinidhi Narendran","borrower_email":"srinidhi@college.edu","loaned_at":"2026-10-16T19:24:17.068968Z","due_date":"2026-10-23","returned_at":null,"return_condition":null,"status":"active"}  HTTP 201
+
+$ curl -s -w '  HTTP %{http_code}' http://localhost:3000/api/items/1
+{"id":1,"name":"Sony ZV-E10","category":"camera","serial_number":"ZVE10-0042","condition":"good","status":"on_loan","notes":null,"created_at":"2026-10-16T19:24:17.014008Z","updated_at":"2026-10-16T19:24:17.068968Z"}  HTTP 200
+
+$ curl -s -w '  HTTP %{http_code}' -X POST http://localhost:3000/api/loans -H 'Content-Type: application/json' -d '{"item_id":1,"borrower_name":"Second Person","borrower_email":"two@college.edu","due_date":"2026-10-23"}'
+{"detail":"Item is already on loan"}  HTTP 409
+
+$ curl -s -w '  HTTP %{http_code}' -X DELETE http://localhost:3000/api/items/1
+{"detail":"Item has an active loan and cannot be deleted"}  HTTP 409
+
+$ curl -s -w '  HTTP %{http_code}' http://localhost:3000/api/stats
+{"items_total":1,"available":0,"on_loan":1,"maintenance":0,"active_loans":1,"overdue_loans":0}  HTTP 200
+
+$ curl -s -w '  HTTP %{http_code}' -X POST http://localhost:3000/api/loans/1/return -H 'Content-Type: application/json' -d '{"condition":"good"}'
+{"id":1,"item_id":1,"item_name":"Sony ZV-E10","borrower_name":"Srinidhi Narendran","borrower_email":"srinidhi@college.edu","loaned_at":"2026-10-16T19:24:17.068968Z","due_date":"2026-10-23","returned_at":"2026-10-16T19:24:17.141432Z","return_condition":"good","status":"returned"}  HTTP 200
+
+$ curl -s -w '  HTTP %{http_code}' http://localhost:3000/api/items/1
+{"id":1,"name":"Sony ZV-E10","category":"camera","serial_number":"ZVE10-0042","condition":"good","status":"available","notes":null,"created_at":"2026-10-16T19:24:17.014008Z","updated_at":"2026-10-16T19:24:17.140712Z"}  HTTP 200
+
+$ curl -s -w '  HTTP %{http_code}' http://localhost:3000/api/stats
+{"items_total":1,"available":1,"on_loan":0,"maintenance":0,"active_loans":0,"overdue_loans":0}  HTTP 200
+
+$ curl -s -w '  HTTP %{http_code}' http://localhost:3000/api/items/99999
+{"detail":"Item 99999 not found"}  HTTP 404
+
+--- Prometheus metrics (backend :8000/metrics, filtered) ---
+
+$ curl -s localhost:8000/metrics | grep -E '^gearloan_|^http_requests_total' | sort
+gearloan_items_created_created 1.7921786377462173e+09
+gearloan_items_created_total 1.0
+gearloan_loans_created_created 1.792178637746209e+09
+gearloan_loans_created_total 1.0
+gearloan_loans_returned_created 1.792178637746214e+09
+gearloan_loans_returned_total 1.0
+http_requests_total{method="DELETE",path="/api/items/{item_id}",status="409"} 1.0
+http_requests_total{method="GET",path="/api/health",status="200"} 1.0
+http_requests_total{method="GET",path="/api/info",status="200"} 1.0
+http_requests_total{method="GET",path="/api/items",status="200"} 1.0
+http_requests_total{method="GET",path="/api/items/{item_id}",status="200"} 2.0
+http_requests_total{method="GET",path="/api/items/{item_id}",status="404"} 1.0
+http_requests_total{method="GET",path="/api/loans",status="200"} 1.0
+http_requests_total{method="GET",path="/api/ready",status="200"} 1.0
+http_requests_total{method="GET",path="/api/stats",status="200"} 2.0
+http_requests_total{method="GET",path="/ready",status="200"} 2.0
+http_requests_total{method="POST",path="/api/items",status="201"} 1.0
+http_requests_total{method="POST",path="/api/items",status="422"} 1.0
+http_requests_total{method="POST",path="/api/loans",status="201"} 1.0
+http_requests_total{method="POST",path="/api/loans",status="409"} 1.0
+http_requests_total{method="POST",path="/api/loans/{loan_id}/return",status="200"} 1.0
+
+
+$ curl -s localhost:8000/metrics | grep -E '^http_request_duration_seconds_count' | sort
+http_request_duration_seconds_count{method="DELETE",path="/api/items/{item_id}"} 1.0
+http_request_duration_seconds_count{method="GET",path="/api/health"} 1.0
+http_request_duration_seconds_count{method="GET",path="/api/info"} 1.0
+http_request_duration_seconds_count{method="GET",path="/api/items"} 1.0
+http_request_duration_seconds_count{method="GET",path="/api/items/{item_id}"} 3.0
+http_request_duration_seconds_count{method="GET",path="/api/loans"} 1.0
+http_request_duration_seconds_count{method="GET",path="/api/ready"} 1.0
+http_request_duration_seconds_count{method="GET",path="/api/stats"} 2.0
+http_request_duration_seconds_count{method="GET",path="/metrics"} 1.0
+http_request_duration_seconds_count{method="GET",path="/ready"} 2.0
+http_request_duration_seconds_count{method="POST",path="/api/items"} 2.0
+http_request_duration_seconds_count{method="POST",path="/api/loans"} 2.0
+http_request_duration_seconds_count{method="POST",path="/api/loans/{loan_id}/return"} 1.0
+

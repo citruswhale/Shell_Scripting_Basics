@@ -1,0 +1,29 @@
+Non-root check - 2026-10-16 21:24:17 CEST
+
+$ docker compose exec backend id
+uid=10001(gearloan) gid=10001(gearloan) groups=10001(gearloan)
+
+$ docker compose exec frontend id
+uid=101(nginx) gid=101(nginx) groups=101(nginx)
+
+$ docker compose exec backend python -c "import os; print('pid 1 uid =', os.stat('/proc/1').st_uid)"
+pid 1 uid = 10001
+
+$ docker compose exec frontend ps -o user,pid,comm
+USER     PID   COMMAND
+nginx        1 nginx
+nginx       35 nginx
+nginx       36 nginx
+nginx       37 nginx
+nginx       38 nginx
+nginx       39 nginx
+nginx       40 nginx
+nginx       41 nginx
+nginx       42 nginx
+nginx       43 nginx
+nginx       44 nginx
+nginx       58 ps
+
+$ docker inspect --format '{{.Name}} User={{.Config.User}}' gearloan-backend-1 gearloan-frontend-1
+/gearloan-backend-1 User=10001:10001
+/gearloan-frontend-1 User=101
