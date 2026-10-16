@@ -1,0 +1,4 @@
+# Extra tools needed only for running the test suite
+-r requirements.txt
+pytest==9.1.1
+httpx2==2.13.1
