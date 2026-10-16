@@ -1,0 +1,125 @@
+# GitHub Actions run 38961008859 (S16 CI/CD demo), commit 301e58b - https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38961008859
+# (excerpt of the real job logs, downloaded with: gh run view <id> --log)
+
+===== job: Test (CI) | step: Run unit tests
+  K8S_DIR: submissions/16-cicd/k8s
+> s16-gear-api@1.0.0 test:report
+> node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=test-results.xml --test-reporter=spec --test-reporter-destination=test-report.txt
+(node:2168) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 end listeners added to [TestsStream]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ GET / returns app name, version and commit (36.176084ms)
+✔ GET /health returns ok (4.394401ms)
+✔ GET /api/gear returns the full list (2.645039ms)
+✔ GET /api/gear?available=true returns only available items (4.013704ms)
+✔ unknown route returns 404 JSON (2.451994ms)
+✔ listGear items have id, name, category and available (0.554969ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 195.878337
+
+===== job: Build and push image | step: Write build info
+  K8S_DIR: submissions/16-cicd/k8s
+image:   ghcr.io/citruswhale/s16-gear-api:301e58bfb387a8042060d2736d061328dae355fd
+digest:  sha256:0d2f0d2767ad9259cf56f6bdaec577a3b3f9b01ebc3e2c807b2a7f691c59e6fc
+commit:  301e58bfb387a8042060d2736d061328dae355fd
+run:     https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38961008859
+
+===== job: Build and push image | step: Build and push
+with:
+  context: submissions/16-cicd/app
+  platforms: linux/amd64
+  push: true
+  tags: ghcr.io/citruswhale/s16-gear-api:301e58bfb387a8042060d2736d061328dae355fd
+ghcr.io/citruswhale/s16-gear-api:latest
+  labels: org.opencontainers.image.source=https://github.com/citruswhale/Shell_Scripting_Basics
+org.opencontainers.image.revision=301e58bfb387a8042060d2736d061328dae355fd
+  load: false
+  no-cache: false
+  pull: false
+  github-token: ***
+  K8S_DIR: submissions/16-cicd/k8s
+refs/heads/master: read/write
+[command]/usr/bin/docker version
+Client: Docker Engine - Community
+ Version:           28.0.4
+ API version:       1.48
+ Go version:        go1.23.7
+ Git commit:        b8034c0
+ Built:             Tue Mar 25 15:07:16 2025
+ OS/Arch:           linux/amd64
+ Context:           default
+Server: Docker Engine - Community
+ Engine:
+  Version:          28.0.4
+  API version:      1.48 (minimum version 1.24)
+  Go version:       go1.23.7
+  Git commit:       6430e49
+  Built:            Tue Mar 25 15:07:16 2025
+
+===== job: Deploy to kind (CD) | step: Pull image and load into kind
+  K8S_DIR: submissions/16-cicd/k8s
+301e58bfb387a8042060d2736d061328dae355fd: Pulling from citruswhale/s16-gear-api
+e2de96513ba9: Already exists
+c3fb422c2ba3: Pulling fs layer
+2af284e0bab3: Pulling fs layer
+862c5dc468d4: Pulling fs layer
+4f5cecc0ce2b: Pulling fs layer
+869b22a1d3ed: Pulling fs layer
+4867c9b651cf: Pulling fs layer
+e7c4b3d944fb: Pulling fs layer
+869b22a1d3ed: Waiting
+4867c9b651cf: Waiting
+e7c4b3d944fb: Waiting
+4f5cecc0ce2b: Waiting
+862c5dc468d4: Verifying Checksum
+
+===== job: Deploy to kind (CD) | step: Wait for rollout
+  K8S_DIR: submissions/16-cicd/k8s
+Waiting for deployment "gear-api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "gear-api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "gear-api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "gear-api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "gear-api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "gear-api" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "gear-api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "gear-api" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "gear-api" rollout to finish: 1 old replicas are pending termination...
+deployment "gear-api" successfully rolled out
+
+===== job: Deploy to kind (CD) | step: Smoke test
+  K8S_DIR: submissions/16-cicd/k8s
+GET / -> {"app":"s16-gear-api","version":"1.0.0","commit":"301e58bfb387a8042060d2736d061328dae355fd"}
+{"status":"ok"}
+{"count":4,"items":[{"id":1,"name":"Canon EOS 90D camera","category":"camera","available":true},{"id":2,"name":"Rode NT-USB microphone","category":"audio","available":false},{"id":3,"name":"Manfrotto tripod","category":"support","available":true},{"id":4,"name":"Epson projector","category":"display","available":true}]}
+
+===== job: Deploy to kind (CD) | step: Show cluster state
+  K8S_DIR: submissions/16-cicd/k8s
+NAME                            READY   STATUS    RESTARTS   AGE   IP           NODE                     NOMINATED NODE   READINESS GATES
+pod/gear-api-7d74975b5d-6rvfn   1/1     Running   0          12s   10.244.0.7   s16-demo-control-plane   <none>           <none>
+pod/gear-api-7d74975b5d-bm69r   1/1     Running   0          9s    10.244.0.8   s16-demo-control-plane   <none>           <none>
+NAME               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE   SELECTOR
+service/gear-api   ClusterIP   10.96.159.137   <none>        80/TCP    12s   app=gear-api
+  Volumes:         <none>
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  gear-api-7fc4df7c (0/0 replicas created), gear-api-85cc966d68 (0/0 replicas created)
+NewReplicaSet:   gear-api-7d74975b5d (2/2 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  12s   deployment-controller  Scaled up replica set gear-api-7fc4df7c from 0 to 2
+  Normal  ScalingReplicaSet  12s   deployment-controller  Scaled up replica set gear-api-85cc966d68 from 0 to 1
+  Normal  ScalingReplicaSet  12s   deployment-controller  Scaled down replica set gear-api-7fc4df7c from 2 to 1
+  Normal  ScalingReplicaSet  12s   deployment-controller  Scaled up replica set gear-api-7d74975b5d from 0 to 1
+  Normal  ScalingReplicaSet  9s    deployment-controller  Scaled down replica set gear-api-7fc4df7c from 1 to 0
+  Normal  ScalingReplicaSet  9s    deployment-controller  Scaled up replica set gear-api-7d74975b5d from 1 to 2

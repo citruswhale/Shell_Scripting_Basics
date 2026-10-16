@@ -1,0 +1,327 @@
+# GitHub Actions run 38961008905 (S17 DevSecOps pipeline), commit 301e58b - https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38961008905
+# (excerpt of the real job logs, downloaded with: gh run view <id> --log)
+
+===== job: Build and unit test | step: Run pytest
+  S17_DIR: submissions/17-devsecops
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+============================= test session starts ==============================
+platform linux -- Python 3.12.15, pytest-9.1.1, pluggy-1.7.0 -- /opt/hostedtoolcache/Python/3.12.15/x64/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/submissions/17-devsecops/app
+plugins: platformdirs-4.13.3, anyio-4.15.1
+collecting ... collected 12 items
+tests/test_api.py::test_health PASSED                                    [  8%]
+tests/test_api.py::test_version_has_app_and_commit PASSED                [ 16%]
+tests/test_api.py::test_fee_normal_case PASSED                           [ 25%]
+tests/test_api.py::test_fee_inside_grace_period_is_zero PASSED           [ 33%]
+tests/test_api.py::test_fee_is_capped PASSED                             [ 41%]
+tests/test_api.py::test_fee_rejects_bad_input[params0] PASSED            [ 50%]
+tests/test_api.py::test_fee_rejects_bad_input[params1] PASSED            [ 58%]
+tests/test_api.py::test_fee_rejects_bad_input[params2] PASSED            [ 66%]
+tests/test_api.py::test_fee_rejects_bad_input[params3] PASSED            [ 75%]
+tests/test_api.py::test_fee_rejects_bad_input[params4] PASSED            [ 83%]
+tests/test_api.py::test_late_fee_function_rejects_negative_days PASSED   [ 91%]
+tests/test_api.py::test_late_fee_rounds_to_two_decimals PASSED           [100%]
+=============================== warnings summary ===============================
+../../../../../../../../opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/submissions/17-devsecops/app/reports/junit.xml -
+======================== 12 passed, 1 warning in 0.27s =========================
+
+===== job: SAST (Bandit, Semgrep) | step: Bandit gate
+  S17_DIR: submissions/17-devsecops
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+[main]
+[main]
+[main]
+[main]
+[main]
+[main]
+Run started:2026-10-16 20:16:52.484930+00:00
+Test results:
+Code scanned:
+Run metrics:
+Files skipped (0):
+
+===== job: SAST (Bandit, Semgrep) | step: Semgrep gate (p/python rules)
+  S17_DIR: submissions/17-devsecops
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 3 files tracked by git with 151 Code rules:
+  Scanning 3 files with 151 python rules.
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 151
+ • Targets scanned: 3
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 151 rules on 3 files: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+===== job: SCA (pip-audit, Trivy fs) | step: pip-audit gate
+  S17_DIR: submissions/17-devsecops
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+No known vulnerabilities found
+No known vulnerabilities found
+
+===== job: SCA (pip-audit, Trivy fs) | step: Trivy fs gate
+with:
+  version: v0.76.0
+  scan-type: fs
+  scan-ref: submissions/17-devsecops/app
+  trivy-config: submissions/17-devsecops/security/trivy.yaml
+  ignore-unfixed: false
+  vuln-type: os,library
+  severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+  format: table
+  cache-dir: /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/.cache/trivy
+  list-all-pkgs: false
+  cache: true
+  skip-setup-trivy: false
+  token-setup-trivy: ***
+  S17_DIR: submissions/17-devsecops
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+##[start-action display=Install Trivy;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy]
+with:
+  version: v0.76.0
+  cache: true
+  token: ***
+  path: $HOME/.local/bin
+  github-server-url: https://github.com
+  S17_DIR: submissions/17-devsecops
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+##[start-action display=Binary dir;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.binary-dir]
+  S17_DIR: submissions/17-devsecops
+  pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.binary-dir;outcome=success;conclusion=success;duration_ms=15]
+##[start-action display=Check the version for caching;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__run]
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__run;outcome=skipped;conclusion=skipped;duration_ms=0]
+
+===== job: Secret scan (Gitleaks) | step: Gitleaks gate
+  S17_DIR: submissions/17-devsecops
+    ○
+    │╲
+    │ ○
+    ○ ░
+    ░    gitleaks
+8:16PM INF 30 commits scanned.
+8:16PM INF scanned ~688954 bytes (688.95 KB) in 260ms
+8:16PM INF no leaks found
+
+===== job: Image scan (Trivy) | step: Trivy image gate
+with:
+  version: v0.76.0
+  input: /home/runner/work/_temp/image.tar
+  trivy-config: submissions/17-devsecops/security/trivy.yaml
+  scan-type: image
+  scan-ref: .
+  ignore-unfixed: false
+  vuln-type: os,library
+  severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+  format: table
+  cache-dir: /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/.cache/trivy
+  list-all-pkgs: false
+  cache: true
+  skip-setup-trivy: false
+  token-setup-trivy: ***
+  S17_DIR: submissions/17-devsecops
+##[start-action display=Install Trivy;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy]
+with:
+  version: v0.76.0
+  cache: true
+  token: ***
+  path: $HOME/.local/bin
+  github-server-url: https://github.com
+  S17_DIR: submissions/17-devsecops
+##[start-action display=Binary dir;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.binary-dir]
+  S17_DIR: submissions/17-devsecops
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.binary-dir;outcome=success;conclusion=success;duration_ms=44]
+##[start-action display=Check the version for caching;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__run]
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__run;outcome=skipped;conclusion=skipped;duration_ms=0]
+##[start-action display=Restore Trivy binary from cache;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.cache]
+with:
+  path: /home/runner/.local/bin/trivy-bin
+  key: trivy-binary-v0.76.0-Linux-X64
+  enableCrossOsArchive: false
+  fail-on-cache-miss: false
+  lookup-only: false
+  S17_DIR: submissions/17-devsecops
+Cache hit for: trivy-binary-v0.76.0-Linux-X64
+Received 47815219 of 47815219 (100.0%), 149.0 MBs/sec
+Cache Size: ~46 MB (47815219 B)
+[command]/usr/bin/tar -xf /home/runner/work/_temp/fc0b22e0-8ce2-4d71-bd08-7947b66ceb5a/cache.tzst -P -C /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics --use-compress-program unzstd
+Cache restored successfully
+Cache restored from key: trivy-binary-v0.76.0-Linux-X64
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.cache;outcome=success;conclusion=success;duration_ms=878]
+##[start-action display=Checkout install script;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__actions_checkout]
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__actions_checkout;outcome=skipped;conclusion=skipped;duration_ms=0]
+##[start-action display=Install Trivy;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__run_2]
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__run_2;outcome=skipped;conclusion=skipped;duration_ms=0]
+##[start-action display=Add Trivy binary to $GITHUB_PATH;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__run_3]
+  S17_DIR: submissions/17-devsecops
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__run_3;outcome=success;conclusion=success;duration_ms=17]
+##[start-action display=Save Trivy binary to cache;id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__actions_cache]
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy.__actions_cache;outcome=skipped;conclusion=skipped;duration_ms=0]
+##[end-action id=__aquasecurity_trivy-action.__aquasecurity_setup-trivy;outcome=success;conclusion=success;duration_ms=963]
+##[start-action display=Get current date;id=__aquasecurity_trivy-action.date]
+  S17_DIR: submissions/17-devsecops
+##[end-action id=__aquasecurity_trivy-action.date;outcome=success;conclusion=success;duration_ms=17]
+##[start-action display=Restore DB from cache;id=__aquasecurity_trivy-action.__actions_cache]
+with:
+  path: /home/runner/work/Shell_Scripting_Basics/Shell_Scripting_Basics/.cache/trivy
+  key: cache-trivy-2026-10-16
+  restore-keys: cache-trivy-
+  enableCrossOsArchive: false
+  fail-on-cache-miss: false
+  lookup-only: false
+  save-always: false
+  S17_DIR: submissions/17-devsecops
+Cache hit for: cache-trivy-2026-10-16
+Received 94845289 of 94845289 (100.0%), 180.5 MBs/sec
+Cache Size: ~90 MB (94845289 B)
+
+===== job: Security gate | step: All checks passed
+  S17_DIR: submissions/17-devsecops
+All security checks passed, image can be pushed.
+
+===== job: Push image to GHCR | step: Push
+  S17_DIR: submissions/17-devsecops
+The push refers to repository [ghcr.io/citruswhale/s17-loan-calculator]
+60ae0871973c: Preparing
+5f70bf18a086: Preparing
+ee8f8571c24a: Preparing
+a7e0bfb5ea65: Preparing
+dca2a125b490: Preparing
+b361fa3b9794: Preparing
+e1fa2746ad6d: Preparing
+15f1c8eb1ab1: Preparing
+e1fa2746ad6d: Waiting
+15f1c8eb1ab1: Waiting
+b361fa3b9794: Waiting
+5f70bf18a086: Mounted from github/gh-aw-mcpg
+dca2a125b490: Pushed
+a7e0bfb5ea65: Pushed
+60ae0871973c: Pushed
+e1fa2746ad6d: Pushed
+ee8f8571c24a: Pushed
+b361fa3b9794: Pushed
+
+===== job: Deploy to Kubernetes (kind) | step: Smoke test
+  S17_DIR: submissions/17-devsecops
+{"status":"ok"}
+GET /version -> {"app":"s17-loan-calculator","version":"1.0.0","commit":"301e58bfb387a8042060d2736d061328dae355fd"}
+GET /fee?days_late=5&daily_rate=20 -> {"days_late":5,"daily_rate":20.0,"grace_days":1,"max_fee":500.0,"fee":80.0,"capped":false}
+GET /fee with days_late=-1 -> HTTP 422
+
+===== job: Deploy to Kubernetes (kind) | step: Show cluster state
+  S17_DIR: submissions/17-devsecops
+NAME                              READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS        IMAGES                                                                             SELECTOR
+deployment.apps/loan-calculator   2/2     2            2           19s   loan-calculator   ghcr.io/citruswhale/s17-loan-calculator:301e58bfb387a8042060d2736d061328dae355fd   app=loan-calculator
+NAME                                   READY   STATUS    RESTARTS   AGE   IP           NODE                     NOMINATED NODE   READINESS GATES
+pod/loan-calculator-66bd8ff954-jhj25   1/1     Running   0          11s   10.244.0.9   s17-demo-control-plane   <none>           <none>
+pod/loan-calculator-66bd8ff954-wnq4n   1/1     Running   0          19s   10.244.0.8   s17-demo-control-plane   <none>           <none>
+NAME                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE   SELECTOR
+service/loan-calculator   ClusterIP   10.96.240.234   <none>        80/TCP    19s   app=loan-calculator
+
+===== job: SAST (Bandit, Semgrep) | step: Bandit gate (full summary)
+Test results:
+	No issues identified.
+Code scanned:
+	Total lines of code: 42
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+Files skipped (0):
+
+===== job: Image scan (Trivy) | step: Trivy image gate (report summary)
+Report Summary
+
+┌──────────────────────────────────────────────────────────────────────────────────┬────────────┬─────────────────┐
+│                                      Target                                      │    Type    │ Vulnerabilities │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ /home/runner/work/_temp/image.tar (debian 13.7)                                  │   debian   │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/annotated_doc-0.0.5.dist-info/METADATA     │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/annotated_types-0.8.0.dist-info/METADATA   │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/anyio-4.15.1.dist-info/METADATA            │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/click-8.5.0.dist-info/METADATA             │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/fastapi-0.143.3.dist-info/METADATA         │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/h11-0.16.0.dist-info/METADATA              │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/idna-3.20.dist-info/METADATA               │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/opentelemetry_api-1.45.1.dist-info/METADA- │ python-pkg │        0        │
+│ TA                                                                               │            │                 │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/pip-25.0.1.dist-info/METADATA              │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/pydantic-2.14.1.dist-info/METADATA         │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/pydantic_core-2.50.1.dist-info/METADATA    │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/starlette-1.8.0.dist-info/METADATA         │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/typing_extensions-4.16.0.dist-info/METADA- │ python-pkg │        0        │
+│ TA                                                                               │            │                 │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/typing_inspection-0.4.4.dist-info/METADATA │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ opt/venv/lib/python3.12/site-packages/uvicorn-0.54.0.dist-info/METADATA          │ python-pkg │        0        │
+├──────────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+│ usr/local/lib/python3.12/site-packages/pip-25.0.1.dist-info/METADATA             │ python-pkg │        0        │
+
+===== job: SCA (pip-audit, Trivy fs) | step: Trivy fs gate (report summary)
+Report Summary
+
+┌──────────────────┬──────┬─────────────────┐
+│      Target      │ Type │ Vulnerabilities │
+├──────────────────┼──────┼─────────────────┤
+│ requirements.txt │ pip  │        0        │
+└──────────────────┴──────┴─────────────────┘
+Legend:
