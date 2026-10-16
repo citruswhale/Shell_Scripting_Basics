@@ -1,0 +1,145 @@
+$ helm lint notes-chart
+==> Linting notes-chart
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+
+$ helm template notes-dev notes-chart
+---
+# Source: notes-chart/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notes-dev-config
+data:
+  APP_NAME: "notes-app"
+  ENVIRONMENT: "development"
+
+---
+# Source: notes-chart/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: notes-dev-svc
+spec:
+  type: NodePort
+  selector:
+    app: notes-dev
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30090
+
+---
+# Source: notes-chart/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notes-dev-deploy
+  labels:
+    app: notes-dev
+    environment: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notes-dev
+  template:
+    metadata:
+      labels:
+        app: notes-dev
+    spec:
+      containers:
+        - name: notes
+          image: "nginx:1.24"
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: notes-dev-config
+
+$ helm install notes-dev notes-chart -n s15 --wait --timeout 2m
+NAME: notes-dev
+LAST DEPLOYED: Fri Oct 16 21:36:40 2026
+NAMESPACE: s15
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+
+$ kubectl get pods,svc,configmap -n s15 -l app=notes-dev; kubectl get configmap notes-dev-config -n s15 -o jsonpath="{.data}"; echo
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/notes-dev-deploy-74956bd987-vtjft   1/1     Running   0          8s
+{"APP_NAME":"notes-app","ENVIRONMENT":"development"}
+
+$ kubectl exec -n s15 deploy/notes-dev-deploy -- sh -c "echo APP_NAME=\$APP_NAME ENVIRONMENT=\$ENVIRONMENT; nginx -v"
+APP_NAME=notes-app ENVIRONMENT=development
+nginx version: nginx/1.24.0
+
+$ helm upgrade notes-dev notes-chart -n s15 -f notes-chart/values-prod.yaml --wait --timeout 2m
+Release "notes-dev" has been upgraded. Happy Helming!
+NAME: notes-dev
+LAST DEPLOYED: Fri Oct 16 21:36:48 2026
+NAMESPACE: s15
+STATUS: deployed
+REVISION: 2
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+
+$ kubectl get pods -n s15 -l app=notes-dev; kubectl exec -n s15 deploy/notes-dev-deploy -- sh -c "echo ENVIRONMENT=\$ENVIRONMENT; nginx -v"
+NAME                                READY   STATUS      RESTARTS   AGE
+notes-dev-deploy-74956bd987-vtjft   0/1     Completed   0          20s
+notes-dev-deploy-74956bd987-zb87t   0/1     Completed   0          11s
+notes-dev-deploy-bbcc464b4-cl4bh    1/1     Running     0          0s
+notes-dev-deploy-bbcc464b4-m7bw2    1/1     Running     0          1s
+notes-dev-deploy-bbcc464b4-q4tsg    1/1     Running     0          11s
+ENVIRONMENT=production
+nginx version: nginx/1.25.5
+
+$ helm history notes-dev -n s15
+REVISION	UPDATED                 	STATUS    	CHART            	APP VERSION	DESCRIPTION     
+1       	Fri Oct 16 21:36:40 2026	superseded	notes-chart-0.1.0	1.0        	Install complete
+2       	Fri Oct 16 21:36:48 2026	deployed  	notes-chart-0.1.0	1.0        	Upgrade complete
+
+$ helm upgrade notes-dev notes-chart -n s15 -f notes-chart/values-prod.yaml --set image.tag=broken-tag-does-not-exist; sleep 25; kubectl get pods -n s15 -l app=notes-dev
+Release "notes-dev" has been upgraded. Happy Helming!
+NAME: notes-dev
+LAST DEPLOYED: Fri Oct 16 21:37:01 2026
+NAMESPACE: s15
+STATUS: deployed
+REVISION: 3
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+NAME                                READY   STATUS             RESTARTS   AGE
+notes-dev-deploy-79b4dbdffd-4tt8g   0/1     ImagePullBackOff   0          25s
+notes-dev-deploy-bbcc464b4-cl4bh    1/1     Running            0          26s
+notes-dev-deploy-bbcc464b4-m7bw2    1/1     Running            0          27s
+notes-dev-deploy-bbcc464b4-q4tsg    1/1     Running            0          37s
+
+$ helm history notes-dev -n s15
+REVISION	UPDATED                 	STATUS    	CHART            	APP VERSION	DESCRIPTION     
+1       	Fri Oct 16 21:36:40 2026	superseded	notes-chart-0.1.0	1.0        	Install complete
+2       	Fri Oct 16 21:36:48 2026	superseded	notes-chart-0.1.0	1.0        	Upgrade complete
+3       	Fri Oct 16 21:37:01 2026	deployed  	notes-chart-0.1.0	1.0        	Upgrade complete
+
+$ helm rollback notes-dev 2 -n s15 --wait --timeout 2m
+Rollback was a success! Happy Helming!
+
+$ kubectl get pods -n s15 -l app=notes-dev; kubectl exec -n s15 deploy/notes-dev-deploy -- nginx -v
+NAME                                READY   STATUS        RESTARTS   AGE
+notes-dev-deploy-79b4dbdffd-4tt8g   0/1     Terminating   0          25s
+notes-dev-deploy-bbcc464b4-cl4bh    1/1     Running       0          26s
+notes-dev-deploy-bbcc464b4-m7bw2    1/1     Running       0          27s
+notes-dev-deploy-bbcc464b4-q4tsg    1/1     Running       0          37s
+nginx version: nginx/1.25.5
+
+$ helm history notes-dev -n s15
+REVISION	UPDATED                 	STATUS    	CHART            	APP VERSION	DESCRIPTION     
+1       	Fri Oct 16 21:36:40 2026	superseded	notes-chart-0.1.0	1.0        	Install complete
+2       	Fri Oct 16 21:36:48 2026	superseded	notes-chart-0.1.0	1.0        	Upgrade complete
+3       	Fri Oct 16 21:37:01 2026	superseded	notes-chart-0.1.0	1.0        	Upgrade complete
+4       	Fri Oct 16 21:37:26 2026	deployed  	notes-chart-0.1.0	1.0        	Rollback to 2   
+
+$ helm uninstall notes-dev -n s15 --wait
+release "notes-dev" uninstalled
+

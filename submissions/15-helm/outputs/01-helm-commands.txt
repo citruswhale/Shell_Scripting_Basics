@@ -1,0 +1,245 @@
+$ helm version
+version.BuildInfo{Version:"v4.3.1", GitCommit:"c0d08d0d6d9424d4a14febb5e8a3e51b0dd00dff", GitTreeState:"clean", GoVersion:"go1.27.2", KubeClientVersion:"v1.37"}
+
+$ helm create gearloan-demo && find gearloan-demo -type f | sort
+Creating gearloan-demo
+gearloan-demo/.helmignore
+gearloan-demo/Chart.yaml
+gearloan-demo/templates/NOTES.txt
+gearloan-demo/templates/_helpers.tpl
+gearloan-demo/templates/deployment.yaml
+gearloan-demo/templates/hpa.yaml
+gearloan-demo/templates/httproute.yaml
+gearloan-demo/templates/ingress.yaml
+gearloan-demo/templates/service.yaml
+gearloan-demo/templates/serviceaccount.yaml
+gearloan-demo/templates/tests/test-connection.yaml
+gearloan-demo/values.yaml
+
+$ helm lint gearloan-demo
+==> Linting gearloan-demo
+[INFO] Chart.yaml: icon is recommended
+
+1 chart(s) linted, 0 chart(s) failed
+
+$ helm template test-render gearloan-demo | grep -E "^kind:|^# Source"
+# Source: gearloan-demo/templates/serviceaccount.yaml
+kind: ServiceAccount
+# Source: gearloan-demo/templates/service.yaml
+kind: Service
+# Source: gearloan-demo/templates/deployment.yaml
+kind: Deployment
+# Source: gearloan-demo/templates/tests/test-connection.yaml
+kind: Pod
+
+$ helm repo add podinfo https://stefanprodan.github.io/podinfo; helm repo add prometheus-community https://prometheus-community.github.io/helm-charts; helm repo update
+"podinfo" already exists with the same configuration, skipping
+"prometheus-community" already exists with the same configuration, skipping
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "podinfo" chart repository
+...Successfully got an update from the "prometheus-community" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+$ helm repo list
+NAME                	URL                                               
+podinfo             	https://stefanprodan.github.io/podinfo            
+prometheus-community	https://prometheus-community.github.io/helm-charts
+
+$ helm search repo podinfo
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION                      
+podinfo/podinfo	6.15.0       	6.15.0     	Podinfo Helm chart for Kubernetes
+
+$ helm search repo prometheus-community/kube-prometheus-stack --versions | head -4
+NAME                                      	CHART VERSION	APP VERSION	DESCRIPTION                                       
+prometheus-community/kube-prometheus-stack	92.10.1      	v0.94.1    	kube-prometheus-stack collects Kubernetes manif...
+prometheus-community/kube-prometheus-stack	92.10.0      	v0.94.1    	kube-prometheus-stack collects Kubernetes manif...
+prometheus-community/kube-prometheus-stack	92.9.0       	v0.94.1    	kube-prometheus-stack collects Kubernetes manif...
+
+$ helm search hub argo-cd --max-col-width 60 | head -5
+URL                                                         	CHART VERSION	APP VERSION	DESCRIPTION                                                 
+https://artifacthub.io/packages/helm/spnngl-argo-cd-crds/...	3.5.7        	3.5.5      	CustomResourceDefinitions for Argo CD (Applications, Appl...
+https://artifacthub.io/packages/helm/emberstack/argo-cd-e...	1.0.22       	1.0.0      	A Helm chart for Argo CD extensions                         
+https://artifacthub.io/packages/helm/argo-cd-oci/argo-cd    	10.10.5      	v3.5.5     	A Helm chart for Argo CD, a declarative, GitOps continuou...
+https://artifacthub.io/packages/helm/mesosphere-stable/ar...	0.5.4        	1.2.0      	A Helm chart for Argo-CD                                    
+
+$ helm show chart podinfo/podinfo
+apiVersion: v1
+appVersion: 6.15.0
+description: Podinfo Helm chart for Kubernetes
+home: https://github.com/stefanprodan/podinfo
+kubeVersion: '>=1.23.0-0'
+maintainers:
+- email: stefanprodan@users.noreply.github.com
+  name: stefanprodan
+name: podinfo
+sources:
+- https://github.com/stefanprodan/podinfo
+version: 6.15.0
+
+
+$ helm show values podinfo/podinfo | sed -n "1,25p"
+# Default values for podinfo.
+
+replicaCount: 1
+logLevel: info
+host: #0.0.0.0
+backend: #http://backend-podinfo:9898/echo
+backends: []
+
+image:
+  repository: ghcr.io/stefanprodan/podinfo
+  tag: 6.15.0
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+prefix: /
+
+ui:
+  color: "#34577c"
+  message: ""
+  logo: ""
+
+# failure conditions
+faults:
+  delay: false
+  error: false
+
+$ helm install demo-podinfo podinfo/podinfo -n s15 --set replicaCount=2 --set ui.message="Hello from Srinidhi (24BCS10037)" --wait --timeout 3m
+NAME: demo-podinfo
+LAST DEPLOYED: Fri Oct 16 21:31:10 2026
+NAMESPACE: s15
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+NOTES:
+1. Get the application URL by running these commands:
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl -n s15 port-forward deploy/demo-podinfo 8080:9898
+
+$ helm list -n s15
+NAME        	NAMESPACE	REVISION	UPDATED                             	STATUS  	CHART         	APP VERSION
+demo-podinfo	s15      	1       	2026-10-16 21:31:10.15712 +0200 CEST	deployed	podinfo-6.15.0	6.15.0     
+
+$ helm status demo-podinfo -n s15
+NAME: demo-podinfo
+LAST DEPLOYED: Fri Oct 16 21:31:10 2026
+NAMESPACE: s15
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+RESOURCES:
+==> v1/Service
+NAME           TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)             AGE
+demo-podinfo   ClusterIP   10.103.164.5   <none>        9898/TCP,9999/TCP   12s
+
+==> v1/Deployment
+NAME           READY   UP-TO-DATE   AVAILABLE   AGE
+demo-podinfo   2/2     2            2           12s
+
+==> v1/Pod(related)
+NAME                            READY   STATUS    RESTARTS   AGE
+demo-podinfo-67c9fb8679-llbw6   1/1     Running   0          12s
+demo-podinfo-67c9fb8679-n8t9z   1/1     Running   0          12s
+
+
+NOTES:
+1. Get the application URL by running these commands:
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl -n s15 port-forward deploy/demo-podinfo 8080:9898
+
+$ kubectl exec -n s15 client -- curl -s http://demo-podinfo:9898 | grep -E "\"(hostname|version|message)\""
+  "hostname": "demo-podinfo-67c9fb8679-llbw6",
+  "version": "6.15.0",
+  "message": "Hello from Srinidhi (24BCS10037)",
+
+$ helm get values demo-podinfo -n s15
+USER-SUPPLIED VALUES:
+replicaCount: 2
+ui:
+  message: Hello from Srinidhi (24BCS10037)
+
+$ helm get values demo-podinfo -n s15 --all | sed -n "1,12p"
+COMPUTED VALUES:
+affinity: {}
+backends: []
+cache: ""
+certificate:
+  create: false
+  dnsNames:
+  - podinfo
+  issuerRef:
+    kind: ClusterIssuer
+    name: self-signed
+config:
+
+$ helm get manifest demo-podinfo -n s15 | grep -E "^kind:|^  name:"
+kind: Service
+  name: demo-podinfo
+kind: Deployment
+  name: demo-podinfo
+
+$ helm get notes demo-podinfo -n s15 | head -5
+NOTES:
+1. Get the application URL by running these commands:
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl -n s15 port-forward deploy/demo-podinfo 8080:9898
+
+
+$ helm get metadata demo-podinfo -n s15
+NAME: demo-podinfo
+CHART: podinfo
+VERSION: 6.15.0
+APP_VERSION: 6.15.0
+ANNOTATIONS: 
+LABELS: modifiedAt=1792179081,name=demo-podinfo,owner=helm,status=deployed,version=1
+DEPENDENCIES: 
+NAMESPACE: s15
+REVISION: 1
+STATUS: deployed
+DEPLOYED_AT: 2026-10-16T21:31:10+02:00
+APPLY_METHOD: server-side apply
+
+$ helm upgrade demo-podinfo podinfo/podinfo -n s15 --reuse-values --set replicaCount=3 --set ui.message="Upgraded by Srinidhi" --wait --timeout 3m
+Release "demo-podinfo" has been upgraded. Happy Helming!
+NAME: demo-podinfo
+LAST DEPLOYED: Fri Oct 16 21:31:22 2026
+NAMESPACE: s15
+STATUS: deployed
+REVISION: 2
+DESCRIPTION: Upgrade complete
+NOTES:
+1. Get the application URL by running these commands:
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl -n s15 port-forward deploy/demo-podinfo 8080:9898
+
+$ kubectl get pods -n s15 -l app.kubernetes.io/name=demo-podinfo; kubectl exec -n s15 client -- curl -s http://demo-podinfo:9898 | grep message
+NAME                            READY   STATUS        RESTARTS   AGE
+demo-podinfo-56c95c8966-gb2rx   1/1     Running       0          3s
+demo-podinfo-56c95c8966-nr42r   1/1     Running       0          14s
+demo-podinfo-56c95c8966-tg8hh   1/1     Running       0          14s
+demo-podinfo-67c9fb8679-llbw6   1/1     Terminating   0          26s
+demo-podinfo-67c9fb8679-n8t9z   1/1     Terminating   0          26s
+  "message": "Upgraded by Srinidhi",
+
+$ helm history demo-podinfo -n s15
+REVISION	UPDATED                 	STATUS    	CHART         	APP VERSION	DESCRIPTION     
+1       	Fri Oct 16 21:31:10 2026	superseded	podinfo-6.15.0	6.15.0     	Install complete
+2       	Fri Oct 16 21:31:22 2026	deployed  	podinfo-6.15.0	6.15.0     	Upgrade complete
+
+$ helm rollback demo-podinfo 1 -n s15 --wait --timeout 3m
+Rollback was a success! Happy Helming!
+
+$ helm history demo-podinfo -n s15; kubectl exec -n s15 client -- curl -s http://demo-podinfo:9898 | grep message
+REVISION	UPDATED                 	STATUS    	CHART         	APP VERSION	DESCRIPTION     
+1       	Fri Oct 16 21:31:10 2026	superseded	podinfo-6.15.0	6.15.0     	Install complete
+2       	Fri Oct 16 21:31:22 2026	superseded	podinfo-6.15.0	6.15.0     	Upgrade complete
+3       	Fri Oct 16 21:31:36 2026	deployed  	podinfo-6.15.0	6.15.0     	Rollback to 1   
+  "message": "Hello from Srinidhi (24BCS10037)",
+
+$ helm uninstall demo-podinfo -n s15 --wait
+release "demo-podinfo" uninstalled
+
+$ helm list -n s15; kubectl get deploy,svc -n s15 -l app.kubernetes.io/name=demo-podinfo
+NAME	NAMESPACE	REVISION	UPDATED	STATUS	CHART	APP VERSION
+No resources found in s15 namespace.
+

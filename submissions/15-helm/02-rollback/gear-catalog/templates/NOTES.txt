@@ -1,0 +1,4 @@
+{{ .Release.Name }} is installed (revision {{ .Release.Revision }}).
+Message: {{ .Values.message }}
+Test it:
+  kubectl run test --rm -i --restart=Never --image=curlimages/curl:8.11.1 -n {{ .Release.Namespace }} -- curl -s http://{{ .Release.Name }}
