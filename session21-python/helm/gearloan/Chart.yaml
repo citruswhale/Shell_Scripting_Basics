@@ -3,7 +3,7 @@ name: gearloan
 description: GearLoan equipment lending app (FastAPI backend, React/nginx frontend, Postgres)
 type: application
 version: 0.1.0
-appVersion: "1.0.0"
+appVersion: "1.1.0"
 keywords:
   - fastapi
   - react
