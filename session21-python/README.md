@@ -45,7 +45,7 @@ The app is the base. The point of the project is the **DevOps around it**: tests
 |---|---|
 | ![desktop](evidence/screenshots/app-desktop-items.png) | ![mobile](evidence/screenshots/app-mobile-items.png) |
 
-A full browser run (add → validation error → search → filter → edit → lend → loan filters → return → reload → delete) is in [`evidence/browser-test/`](evidence/browser-test/), with [screenshots](evidence/browser-test/), the [step log](evidence/browser-test/browser-test-output.txt) and a [video](evidence/browser-test/gearloan-browser-test.webm).
+A full browser run (add → validation error → search → filter → edit → lend → loan filters → return → reload → delete) is in [`evidence/browser-test/`](evidence/browser-test/), with [screenshots](evidence/browser-test/) and the [step log](evidence/browser-test/browser-test-output.txt).
 
 ---
 
@@ -70,7 +70,7 @@ A full browser run (add → validation error → search → filter → edit → 
    │ ┌──────────────────────── EKS 1.37, 2 × m7i-flex.large ─────────────────────┐  │
    │ │ Argo CD ── syncs Helm chart ──► namespace gearloan                        │  │
    │ │                                                                           │  │
-   │ │  ingress-nginx (AWS NLB) ── /     ──► frontend Service ──► 2+ nginx Pods  │  │
+   │ │  ingress-nginx (node IP:30080) ── / ──► frontend Service ──► 2+ nginx Pods│  │
    │ │                          └─ /api  ──► backend Service ──► 2+ FastAPI Pods │  │
    │ │                                                       └─► PostgreSQL     │  │
    │ │                                                         (StatefulSet+EBS)│  │
@@ -225,7 +225,25 @@ terraform destroy
 ```
 Credentials come from my local AWS profile (`AWS_PROFILE=devops-lab`). Nothing secret is in the repo.
 
-**EKS run evidence:** EKS_RUN_PENDING
+**EKS run (real output):** [`evidence/terraform/terraform-eks-run.txt`](evidence/terraform/terraform-eks-run.txt)
+```text
+Plan: 45 to add, 0 to change, 0 to destroy.
+...
+Apply complete! Resources: 4 added, 0 changed, 1 destroyed.     (second apply, see the note below)
+cluster_name = "gearloan-eks"
+public_subnet_ids = ["subnet-0fa6882b0aec6d397", "subnet-0f511b368ebcfe1d3"]
+vpc_id = "vpc-0dacaeed889bf7dd8"
+```
+AWS Console (my login, region ap-south-1):
+
+| VPC with 2 public subnets | EKS cluster Active, 1.37 |
+|---|---|
+| ![vpc](evidence/aws-console/vpc.png) | ![eks](evidence/aws-console/eks-cluster.png) |
+| ![subnets](evidence/aws-console/subnets.png) | ![nodes](evidence/aws-console/eks-compute.png) |
+
+> **Two things my AWS account didn't allow** (it's a new account on the AWS Free plan):
+> 1. **t3.medium workers.** The first node group never started; CloudTrail showed `RunInstances → "The specified instance type is not eligible for Free Tier"`. I stopped Terraform, switched to **m7i-flex.large** (free-plan eligible, x86, 8 GiB) and applied again. Log of that attempt: [`attempt1-t3medium-not-allowed-on-free-plan.txt`](evidence/terraform/attempt1-t3medium-not-allowed-on-free-plan.txt).
+> 2. **Load balancers.** `CreateLoadBalancer → OperationNotPermitted: This AWS account currently does not support creating load balancers` — even after upgrading the account to the Paid plan. AWS Support has to enable it for new accounts. So instead of an NLB, the ingress-nginx Service is a **NodePort (30080)** and the app is reached over the internet on a worker node's public AWS IP. Terraform adds a security group rule that opens 30080 **only to my own IP** (`ingress_allowed_cidrs`), plus a node-to-node TCP 80 rule so traffic arriving on either node reaches the ingress Pod.
 
 ---
 
@@ -261,7 +279,41 @@ kubectl apply -f k8s/argocd/application.yaml
 
 Local test on Minikube (all Running, data survives Pod restarts, upgrade works): [`evidence/k8s-local/`](evidence/k8s-local/).
 
-**EKS evidence (`kubectl get pods/svc/ingress`, `helm list`, the app through the load balancer):** EKS_K8S_PENDING
+**EKS evidence** ([`evidence/eks/`](evidence/eks/)):
+
+The app over the internet, through the Ingress on EKS (`http://<node public IP>:30080`):
+
+| Desktop | Phone |
+|---|---|
+| ![app on eks](evidence/eks/app-through-ingress.png) | ![app on eks mobile](evidence/eks/app-through-ingress-mobile.png) |
+
+```text
+$ kubectl get pods -n gearloan                       # all Running, spread over both nodes / AZs
+gearloan-backend-55fb999cdb-2bdgl    1/1     Running   10.30.2.179   ip-10-30-2-248
+gearloan-backend-55fb999cdb-wjg6f    1/1     Running   10.30.1.13    ip-10-30-1-190
+gearloan-frontend-5c7bf69b5-8vptp    1/1     Running   10.30.2.12    ip-10-30-2-248
+gearloan-frontend-5c7bf69b5-dmn8n    1/1     Running   10.30.1.173   ip-10-30-1-190
+gearloan-postgres-0                  1/1     Running   10.30.2.149   ip-10-30-2-248
+
+$ kubectl get svc,ingress,hpa,pvc -n gearloan
+service/gearloan-backend    ClusterIP   172.20.9.100   8000/TCP
+service/gearloan-frontend   ClusterIP   172.20.122.9   8080/TCP
+service/gearloan-postgres   ClusterIP   None           5432/TCP
+ingress/gearloan            nginx   *   80
+hpa/gearloan-backend        cpu: 12%/70%   2  5  2
+hpa/gearloan-frontend       cpu: 2%/70%    2  5  2
+pvc/data-gearloan-postgres-0   Bound   5Gi   RWO   gp3
+
+$ kubectl get application -n argocd
+gearloan   Synced   Healthy
+```
+- Full output: [`kubectl-get-all.txt`](evidence/eks/kubectl-get-all.txt) ([image](evidence/eks/kubectl-get-all.png)), public access check: [`app-public-access-and-kubectl.txt`](evidence/eks/app-public-access-and-kubectl.txt)
+- **`helm upgrade --install` on EKS** → `STATUS: deployed`, `REVISION: 1`, and `helm list` shows the release: [`helm-upgrade-install.txt`](evidence/eks/helm-upgrade-install.txt) ([image](evidence/eks/helm-upgrade-install.png)). I ran it in a separate namespace (`gearloan-helm`) and removed it afterwards, because in `gearloan` the same chart is installed by **Argo CD** (Argo CD renders the chart itself, so it doesn't appear in `helm list`).
+- **Argo CD:** `gearloan` Synced and Healthy on EKS:
+
+![argo cd on eks](evidence/eks/argocd-gearloan-synced.png)
+
+- **GitOps flow on EKS**, really happening: each push to master → green pipeline → bot commit with the new tag → Argo CD sync → new pods. Argo CD history and the matching commits: [`gitops-history.txt`](evidence/eks/gitops-history.txt) (e.g. `cea8e2a` → bot `09863ed` → app reported `1.0.0-cea8e2a`).
 
 ## 11. Observability – Prometheus + Grafana ([`monitoring/`](monitoring/))
 
@@ -277,7 +329,19 @@ Tested on Minikube: targets **UP**, live dashboard, and the 4xx alert **fired an
 
 ![grafana](../Sesh%2020%20Monitoring%20GitOps/screenshots/grafana-gearloan-dashboard.png)
 
-**EKS monitoring evidence:** EKS_MON_PENDING
+**EKS monitoring evidence** (normal traffic from the traffic generator):
+
+```text
+$ curl -s http://<node ip>:30080/api/metrics | grep http_requests_total      # through the Ingress
+http_requests_total{method="GET",path="/health",status="200"} 40.0
+http_requests_total{method="GET",path="/api/stats",status="200"} 67.0
+...
+```
+Full sample: [`metrics-through-ingress.txt`](evidence/eks/metrics-through-ingress.txt)
+
+| Prometheus target UP (2/2) | Grafana, live on EKS |
+|---|---|
+| ![targets](evidence/eks/prometheus-targets-up.png) | ![grafana](evidence/eks/grafana-gearloan-dashboard.png) |
 
 ## 12. Troubleshooting notes (real problems I hit)
 
@@ -293,9 +357,9 @@ Tested on Minikube: targets **UP**, live dashboard, and the 4xx alert **fired an
 ```bash
 # local
 docker compose down -v
-# EKS: delete things that created AWS resources first (load balancer, EBS volumes), then the cluster
+# EKS: stop Argo CD first (or it re-creates things), delete the PVCs (EBS volumes) and any LoadBalancer Service, then the cluster
 kubectl delete -n argocd application gearloan
-helm uninstall ingress-nginx -n ingress-nginx       # removes the NLB
+helm uninstall ingress-nginx -n ingress-nginx       # would remove the NLB if one existed
 kubectl delete pvc --all -n gearloan                # removes the EBS volumes
 cd terraform && terraform destroy
 ```
@@ -304,9 +368,32 @@ cd terraform && terraform destroy
 - Minikube and EKS are both single-region labs. There's no NAT gateway, no private subnets and no multi-AZ database, to keep the cost low.
 - PostgreSQL runs as one Pod with one EBS volume (not RDS, no replica, no backups).
 - No login or users: anyone who can open the app can lend items.
-- No HTTPS on the lab load balancer (plain HTTP).
+- **No AWS load balancer:** my account can't create one yet (see section 9), so the app is reached on a node's public IP, port 30080, opened only to my IP. With ELB enabled, `INGRESS_SERVICE_TYPE=LoadBalancer ./scripts/eks-bootstrap.sh` gives an NLB instead.
+- Plain HTTP, no TLS certificate.
 - No traces yet (OpenTelemetry would be the next step).
 - The EKS cluster is destroyed after the demo, so there's **no permanent live URL**. The recordings and screenshots in [`evidence/`](evidence/) and [`demo/`](demo/) show it working, and everything can be recreated with the commands above.
 
 ## 15. Evidence index
-EVIDENCE_INDEX_PENDING
+| Rubric item | Evidence |
+|---|---|
+| M1 app in the browser | [desktop](evidence/screenshots/app-desktop-items.png) · [phone](evidence/screenshots/app-mobile-items.png) · [browser test screenshots + log](evidence/browser-test/) |
+| M2 `pytest -v` passing | [image](evidence/screenshots/pytest-28-passed.png) · [text](evidence/local/pytest-output.txt) |
+| M3 commit history (≥10 commits) | [GitHub commit history](evidence/screenshots/github-commit-history.png) |
+| M4 `docker compose up --build`, non-root | [image](evidence/screenshots/docker-compose-up-build.png) · [text](evidence/local/compose-up.txt) |
+| M4 app at `localhost:3000` | [desktop](evidence/screenshots/app-desktop-items.png) |
+| M5 green pipeline | [run 38964516947](https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38964516947) · [screenshot](evidence/screenshots/github-actions-capstone-green.png) · [log excerpt](evidence/ci/github-actions-run-38964516947.txt) |
+| M5 GHCR images with SHA tags | [backend](evidence/screenshots/ghcr-gearloan-backend.png) · [frontend](evidence/screenshots/ghcr-gearloan-frontend.png) · [versions](evidence/screenshots/ghcr-gearloan-backend-versions.png) |
+| M6 Trivy output + explanation | [log excerpt (both images)](evidence/ci/github-actions-run-38964516947.txt) · [section 8](#8-devsecops--trivy-and-other-gates) |
+| M7 `terraform plan` | [image](evidence/terraform/terraform-plan.png) · [full run log](evidence/terraform/terraform-eks-run.txt) |
+| M7 AWS Console: VPC + EKS | [VPC](evidence/aws-console/vpc.png) · [subnets](evidence/aws-console/subnets.png) · [EKS cluster](evidence/aws-console/eks-cluster.png) · [node group](evidence/aws-console/eks-compute.png) |
+| M7 `terraform destroy` | [image](evidence/terraform/terraform-destroy.png) · [full log + leftover check](evidence/terraform/terraform-destroy.txt) |
+| M8 `kubectl get pods` / `svc`, all Running | [image](evidence/eks/kubectl-pods-svc-ingress.png) · [full text](evidence/eks/kubectl-get-all.txt) |
+| M8 `helm upgrade --install` + `helm list` | [image](evidence/eks/helm-upgrade-install.png) · [text](evidence/eks/helm-upgrade-install.txt) |
+| M8 app through the Ingress | [desktop](evidence/eks/app-through-ingress.png) · [phone](evidence/eks/app-through-ingress-mobile.png) |
+| M9 `/metrics` | [compose](evidence/screenshots/backend-metrics-curl.png) · [EKS via Ingress](evidence/eks/metrics-through-ingress.txt) |
+| M9 Prometheus target UP | [EKS](evidence/eks/prometheus-targets-up.png) |
+| M9 Grafana with live panels | [EKS](evidence/eks/grafana-gearloan-dashboard.png) |
+| GitOps (Argo CD) | [synced on EKS](evidence/eks/argocd-gearloan-synced.png) · [sync history](evidence/eks/gitops-history.txt) |
+| M10 slides + video | [`demo/GearLoan-presentation.pptx`](demo/GearLoan-presentation.pptx) · [PDF](demo/GearLoan-presentation.pdf) · [`demo/GearLoan-demo.mp4`](demo/GearLoan-demo.mp4) |
+
+All AWS resources were destroyed after the demo (`Destroy complete! Resources: 47 destroyed.`, state empty, and a check found no EKS, EC2, EBS, load balancer, NAT, Elastic IP, VPC, IAM role or S3 bucket left), so there is no live URL any more. The commands in sections 5, 9 and 10 recreate everything.

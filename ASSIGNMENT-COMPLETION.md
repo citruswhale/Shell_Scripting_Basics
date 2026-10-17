@@ -25,9 +25,9 @@ Sessions 1–8 were done earlier and aren't listed here.
 | 15 | All Helm commands, install→upgrade→upgrade→rollback, notes-chart | [15](Sesh%2015%20Helm/README.md) | Helm v4.3.1 real output | ✅ |
 | 16 | CI/CD demo: app, Dockerfile, CI + CD, artifacts, secrets | [16](Sesh%2016%20CICD%20GitHub%20Actions/README.md) | [green run 38961008859](https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38961008859) | ✅ |
 | 17 | Build, test, SAST, SCA, secret scan, image scan, gate, push, deploy | [17](Sesh%2017%20DevSecOps/README.md) | [green run 38961008905](https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38961008905) | ✅ |
-| 18 | Terraform S3 demo: init/fmt/validate/plan/apply/show/output/destroy | [18](Sesh%2018%20Terraform/README.md) | code + plan ready; apply waiting for AWS approval | ⏳ |
+| 18 | Terraform S3 demo: init/fmt/validate/plan/apply/show/output/destroy | [18](Sesh%2018%20Terraform/README.md) | applied on AWS: 7 resources, versioning + SSE-S3 + public block checked, then `Destroy complete! Resources: 7 destroyed.` | ✅ |
 | 18 | AWS research READMEs (IAM, EC2, S3, VPC, DynamoDB/RDS) | [18/aws-services](Sesh%2018%20Terraform/aws-services/) | written | ✅ |
-| 19 | VPC/subnet/SG/EC2/S3 project with plan/apply/destroy | [19](Sesh%2019%20Cloud%20Terraform/README.md) | code + plan ready; apply waiting for AWS approval | ⏳ |
+| 19 | VPC/subnet/SG/EC2/S3 project with plan/apply/destroy | [19](Sesh%2019%20Cloud%20Terraform/README.md) | applied on AWS: 16 resources, nginx page on EC2 answered, least-privilege IAM checked, then 16 destroyed | ✅ |
 | 20 | Monitoring demo, observability doc, GitOps demo | [20](Sesh%2020%20Monitoring%20GitOps/README.md) | Prometheus targets UP, live Grafana, alert fired and resolved, Argo CD sync + self-heal | ✅ |
 
 ## Session 21 – capstone (rubric modules)
@@ -40,12 +40,11 @@ Sessions 1–8 were done earlier and aren't listed here.
 | M4 | Backend Dockerfile, multi-stage frontend, non-root, compose up --build | [`docker-compose.yml`](session21-python/docker-compose.yml) | [compose output](session21-python/evidence/local/compose-up.txt): uid 10001 / 101 | ✅ |
 | M5 | Workflow on push to main, pytest job, frontend build, both images, GHCR, SHA tags | [`capstone-ci-cd.yml`](.github/workflows/capstone-ci-cd.yml) | [green run 38964516947](https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38964516947): 15 jobs; GHCR tags `22d5492` + full SHA ([screenshot](session21-python/evidence/screenshots/ghcr-gearloan-backend.png)) | ✅ |
 | M6 | Trivy on both images, fails on HIGH/CRITICAL, explanation | same workflow | Trivy gate on both images: Debian 13.7 (backend) and Alpine 3.24.2 (frontend), 0 HIGH/CRITICAL with a fix ([log](session21-python/evidence/ci/github-actions-run-38964516947.txt)) | ✅ |
-| M7 | Terraform VPC (2 public subnets) + EKS node group, init/plan/destroy, tfvars.example | [`terraform/`](session21-python/terraform/) | validate + plan pass (45 resources); apply waiting for AWS approval | ⏳ |
-| M8 | k8s/namespace.yaml, Helm chart, 2+2 replicas, ClusterIP, Ingress `/` + `/api`, pods Running | [`helm/`](session21-python/helm/), [`k8s/`](session21-python/k8s/) | works on Minikube ([evidence](session21-python/evidence/k8s-local/)); EKS run pending | 🟡 |
-| M9 | /metrics, Prometheus scraping, Grafana with live panel | [`monitoring/`](session21-python/monitoring/) | targets UP + live dashboard on Minikube ([Session 20](Sesh%2020%20Monitoring%20GitOps/README.md)); EKS run pending | 🟡 |
-| M10 | Root README, demo video, PPT/PDF slides | [`session21-python/README.md`](session21-python/README.md), `demo/` | not written yet | ⏳ |
+| M7 | Terraform VPC (2 public subnets) + EKS node group, init/plan/destroy, tfvars.example | [`terraform/`](session21-python/terraform/) | plan 45 resources, applied (EKS 1.37, 2 × m7i-flex.large), [Console screenshots](session21-python/evidence/aws-console/), `Destroy complete! Resources: 47 destroyed.` + leftover check | ✅ |
+| M8 | k8s/namespace.yaml, Helm chart, 2+2 replicas, ClusterIP, Ingress `/` + `/api`, pods Running | [`helm/`](session21-python/helm/), [`k8s/`](session21-python/k8s/) | on EKS: all Pods Running, ClusterIP Services, Ingress, HPA, PVC, `helm upgrade --install` + `helm list`, app reached over the internet through the Ingress ([evidence](session21-python/evidence/eks/)). No AWS load balancer: the account can't create one yet, so the Ingress is reached on a node's public IP | ✅ |
+| M9 | /metrics, Prometheus scraping, Grafana with live panel | [`monitoring/`](session21-python/monitoring/) | on EKS: target 2/2 UP, live Grafana dashboard, `/metrics` through the Ingress ([evidence](session21-python/evidence/eks/)) | ✅ |
+| M10 | Root README, demo video, PPT/PDF slides | [`session21-python/README.md`](session21-python/README.md), [`demo/`](session21-python/demo/) | README with all sections, 12-slide deck (PPTX + PDF), my recorded presentation video (MP4) | ✅ |
 
 ## Things only I can do
-- 👤 Approve the AWS spending, and log in to the AWS Console for the VPC/EKS screenshots while the cluster is running.
-- 👤 Record or narrate the presentation video (the brief requires my own presentation).
+- ✅ AWS spending approved, Console screenshots taken, presentation video recorded.
 - 👤 Submit the form.

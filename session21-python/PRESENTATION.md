@@ -32,7 +32,7 @@ Target length is about 10–12 minutes. Show the slides first ([`demo/`](demo/))
    kubectl --context gearloan-eks get pods,svc,ingress,hpa,pvc -n gearloan
    helm --kube-context gearloan-eks list -A
    ```
-   Then open the app through the load balancer URL.
+   Then open the app through the Ingress (node public IP, port 30080; the account cannot create a load balancer yet).
 4. **CI/CD live change (3 min, the main demo).**
    - Change something visible: bump `appVersion` in `helm/gearloan/Chart.yaml` (shown in the app header and `/api/info`), or edit a heading in the frontend.
    - `git commit -am "..." && git push`
