@@ -4,7 +4,7 @@
 
 I built a small demo project with a full **CI/CD pipeline in GitHub Actions**. Every push that changes this folder runs the tests, builds a Docker image, pushes it to GitHub Container Registry (GHCR), and then deploys it to a real Kubernetes cluster (kind) inside the runner, where a smoke test checks it.
 
-- **Workflow file:** [`.github/workflows/s16-cicd.yml`](../../.github/workflows/s16-cicd.yml)
+- **Workflow file:** [`.github/workflows/s16-cicd.yml`](../.github/workflows/s16-cicd.yml)
 - **Green run:** https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38961008859 (commit `301e58b`, 1m58s, all 3 jobs passed)
 - **Concept notes** (CI vs CD, workflow, jobs, steps, runners, secrets, artifacts, triggers): [`CONCEPTS.md`](CONCEPTS.md)
 - **Log excerpt from that run:** [`outputs/github-actions-run-38961008859.txt`](outputs/github-actions-run-38961008859.txt)
@@ -35,7 +35,7 @@ docker build -t s16-gear-api app && docker run -p 3000:3000 s16-gear-api
 ## The pipeline
 
 ```text
- git push (changes in submissions/16-cicd/**)
+ git push (changes in Sesh 16 CICD GitHub Actions/**)
         │
         ▼
  ┌──────────────┐     ┌─────────────────────────┐     ┌──────────────────────────────┐

@@ -17,3 +17,11 @@ submissions/12-kubernetes-config-ingress/04-troubleshooting/broken-client-secret
 submissions/16-cicd/README.md:generic-api-key:81
 submissions/16-cicd/outputs/github-actions-run-38961008859.txt:generic-api-key:27
 submissions/16-cicd/outputs/github-actions-run-38961008859.txt:generic-api-key:37
+# same findings after Sessions 9-20 moved to the top level
+Sesh 12 Ingress ConfigMaps Secrets/04-troubleshooting/postgres.yaml:kubernetes-secret-yaml:3
+Sesh 12 Ingress ConfigMaps Secrets/04-troubleshooting/fixed-client-secret.yaml:kubernetes-secret-yaml:3
+Sesh 12 Ingress ConfigMaps Secrets/04-troubleshooting/broken-client-secret.yaml:kubernetes-secret-yaml:4
+Sesh 12 Ingress ConfigMaps Secrets/04-troubleshooting/broken-client-secret.yaml:generic-api-key:10
+Sesh 16 CICD GitHub Actions/README.md:generic-api-key:81
+Sesh 16 CICD GitHub Actions/outputs/github-actions-run-38961008859.txt:generic-api-key:27
+Sesh 16 CICD GitHub Actions/outputs/github-actions-run-38961008859.txt:generic-api-key:37

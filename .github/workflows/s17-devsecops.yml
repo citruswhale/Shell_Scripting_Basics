@@ -8,7 +8,7 @@ on:
   push:
     branches: [master]
     paths:
-      - "submissions/17-devsecops/**"
+      - "Sesh 17 DevSecOps/**"
       - ".github/workflows/s17-devsecops.yml"
   workflow_dispatch:
 
@@ -21,8 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  S17_DIR: submissions/17-devsecops
-  APP_DIR: submissions/17-devsecops/app
+  S17_DIR: "Sesh 17 DevSecOps"
+  APP_DIR: "Sesh 17 DevSecOps/app"
   IMAGE: ghcr.io/citruswhale/s17-loan-calculator
   PYTHON_VERSION: "3.12"
   TRIVY_VERSION: v0.76.0

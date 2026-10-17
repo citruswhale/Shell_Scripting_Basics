@@ -14,7 +14,7 @@ What I used from other places, and how.
   - Session 21: the rubric in `session21-python/GRADING.md`. My capstone app (**GearLoan**) and all its code are my own; it is not based on the TaskBoard example.
 - **Homework document:** the official homework Google Doc for the task lists.
 
-Everything else in `submissions/` and `session21-python/` (apps, YAML, Helm charts, Terraform, workflows, dashboards, scripts and READMEs) was written for this repo.
+Everything else in the `Sesh 9` to `Sesh 20` folders and `session21-python/` (apps, YAML, Helm charts, Terraform, workflows, dashboards, scripts and READMEs) was written for this repo.
 
 ## Public images, charts and tools used
 - Container images: `nginx`, `busybox`, `python`, `node`, `postgres`, `curlimages/curl`, `hashicorp/http-echo`, `registry.k8s.io/e2e-test-images/agnhost`, `nginxinc/nginx-unprivileged`.

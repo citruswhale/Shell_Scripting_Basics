@@ -18,11 +18,11 @@ Raw output: [`outputs/`](outputs/) · Screenshots: [`screenshots/`](screenshots/
 |---|---|
 | App being watched | GearLoan (FastAPI backend ×2, frontend ×2, PostgreSQL), Helm release `gearloan` in namespace `gearloan` |
 | App metrics | backend `/metrics`: `http_requests_total{method,path,status}`, `http_request_duration_seconds` histogram, `gearloan_loans_created_total`, `gearloan_loans_returned_total`, `gearloan_items_created_total` |
-| Monitoring stack | `prometheus-community/kube-prometheus-stack` **92.10.1**, values in [`session21-python/monitoring/kube-prometheus-stack-values.yaml`](../../session21-python/monitoring/kube-prometheus-stack-values.yaml) |
+| Monitoring stack | `prometheus-community/kube-prometheus-stack` **92.10.1**, values in [`session21-python/monitoring/kube-prometheus-stack-values.yaml`](../session21-python/monitoring/kube-prometheus-stack-values.yaml) |
 | Scraping | a **ServiceMonitor** from my Helm chart (`serviceMonitor.enabled=true`) → job `gearloan-backend`, every 30 s |
-| Dashboard | [`gearloan-overview.json`](../../session21-python/monitoring/dashboards/gearloan-overview.json), loaded by the Grafana sidecar from a ConfigMap labelled `grafana_dashboard=1` |
-| Alerts | [`gearloan-alerts.yaml`](../../session21-python/monitoring/gearloan-alerts.yaml) (PrometheusRule): backend down, >20% 4xx, p95 > 500 ms |
-| Traffic | [`traffic-generator.yaml`](../../session21-python/monitoring/traffic-generator.yaml): adds an item, searches, lends, returns, reads stats, and sometimes asks for items that don't exist (404) |
+| Dashboard | [`gearloan-overview.json`](../session21-python/monitoring/dashboards/gearloan-overview.json), loaded by the Grafana sidecar from a ConfigMap labelled `grafana_dashboard=1` |
+| Alerts | [`gearloan-alerts.yaml`](../session21-python/monitoring/gearloan-alerts.yaml) (PrometheusRule): backend down, >20% 4xx, p95 > 500 ms |
+| Traffic | [`traffic-generator.yaml`](../session21-python/monitoring/traffic-generator.yaml): adds an item, searches, lends, returns, reads stats, and sometimes asks for items that don't exist (404) |
 
 ```bash
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack --version 92.10.1 \
@@ -142,7 +142,7 @@ The three pillars, why observability is needed, the common tools and Kubernetes 
   kubectl apply -n argocd --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.5/manifests/install.yaml
   ```
 - What Argo CD watches is [`gitops/app/`](gitops/app/): a Namespace `s20-gitops`, a Deployment `gear-status` (2 replicas) and a Service.
-- [`gitops/argocd-application.yaml`](gitops/argocd-application.yaml) points Argo CD at `https://github.com/citruswhale/Shell_Scripting_Basics.git`, branch `master`, path `submissions/20-monitoring-gitops/gitops/app`. It has `automated: { prune: true, selfHeal: true }`. The Application file sits **outside** `app/` so Argo CD doesn't try to deploy itself.
+- [`gitops/argocd-application.yaml`](gitops/argocd-application.yaml) points Argo CD at `https://github.com/citruswhale/Shell_Scripting_Basics.git`, branch `master`, path `Sesh 20 Monitoring GitOps/gitops/app`. It has `automated: { prune: true, selfHeal: true }`. The Application file sits **outside** `app/` so Argo CD doesn't try to deploy itself.
 
 ### 1. First sync from Git
 ```text
@@ -152,7 +152,7 @@ application.argoproj.io/gear-status created
 NAME          SYNC STATUS   HEALTH STATUS
 gear-status   Synced        Healthy
 repo: https://github.com/citruswhale/Shell_Scripting_Basics.git
-path: submissions/20-monitoring-gitops/gitops/app
+path: Sesh 20 Monitoring GitOps/gitops/app
 revision: 83c8c5a2ee434b222013a5151f9dbe66271f2731
 
 deployment.apps/gear-status   2/2     2            2           3s

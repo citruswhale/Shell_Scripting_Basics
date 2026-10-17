@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/citruswhale/Shell_Scripting_Basics.git
     targetRevision: master
-    path: submissions/20-monitoring-gitops/gitops/app
+    path: "Sesh 20 Monitoring GitOps/gitops/app"
   destination:
     server: https://kubernetes.default.svc
     namespace: s20-gitops

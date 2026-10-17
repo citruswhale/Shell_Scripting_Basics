@@ -4,7 +4,7 @@
 
 A CI/CD pipeline with **security checks built in**. The image is only pushed to the registry and deployed if the tests, code scans, dependency scans, secret scan and container scan all pass.
 
-- **Workflow:** [`.github/workflows/s17-devsecops.yml`](../../.github/workflows/s17-devsecops.yml)
+- **Workflow:** [`.github/workflows/s17-devsecops.yml`](../.github/workflows/s17-devsecops.yml)
 - **Green run:** https://github.com/citruswhale/Shell_Scripting_Basics/actions/runs/38961008905 (commit `301e58b`, 3m35s, 9 jobs, 7 artifacts)
 - **Log excerpt from that run:** [`outputs/github-actions-run-38961008905.txt`](outputs/github-actions-run-38961008905.txt)
 
@@ -62,7 +62,7 @@ On GitHub the independent checks run **in parallel** to save time. The **securit
 ### Security tool settings ([`security/`](security/))
 - [`trivy.yaml`](security/trivy.yaml): `severity: [HIGH, CRITICAL]`, `exit-code: 1`, `ignore-unfixed: true`.
 - [`bandit.yaml`](security/bandit.yaml): scans `app/`, skips the tests folder (asserts in tests are normal).
-- Gitleaks uses its default rules. The repo's [`.gitleaksignore`](../../.gitleaksignore) only lists the 4 made-up Session 12 lab passwords.
+- Gitleaks uses its default rules. The repo's [`.gitleaksignore`](../.gitleaksignore) only lists the 4 made-up Session 12 lab passwords.
 
 **About `ignore-unfixed`:** without it, Trivy reports some HIGH CVEs in Debian 13 base packages that have **no fixed version released yet**, so there is nothing I can upgrade to. Failing on those would block every build without making anything safer. The gate still fails on any HIGH or CRITICAL that **does** have a fix. I didn't add any `.trivyignore` suppressions.
 

@@ -273,9 +273,9 @@ Local test on Minikube (all Running, data survives Pod restarts, upgrade works):
 - **Grafana:** my own dashboard ([JSON](monitoring/dashboards/gearloan-overview.json)) with 10 panels: requests/s, error rate, p95, Pods up, requests by route, by status, p50/p95/p99, loans per minute, CPU, memory.
 - **Alerts:** [`gearloan-alerts.yaml`](monitoring/gearloan-alerts.yaml) has backend down, >20% 4xx, and p95 > 500 ms.
 
-Tested on Minikube: targets **UP**, live dashboard, and the 4xx alert **fired and then resolved**. Full write-up in [Session 20](../submissions/20-monitoring-gitops/README.md).
+Tested on Minikube: targets **UP**, live dashboard, and the 4xx alert **fired and then resolved**. Full write-up in [Session 20](../Sesh%2020%20Monitoring%20GitOps/README.md).
 
-![grafana](../submissions/20-monitoring-gitops/screenshots/grafana-gearloan-dashboard.png)
+![grafana](../Sesh%2020%20Monitoring%20GitOps/screenshots/grafana-gearloan-dashboard.png)
 
 **EKS monitoring evidence:** EKS_MON_PENDING
 
