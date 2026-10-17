@@ -20,7 +20,7 @@ Everything else in the `Sesh 9` to `Sesh 20` folders and `session21-python/` (ap
 - Container images: `nginx`, `busybox`, `python`, `node`, `postgres`, `curlimages/curl`, `hashicorp/http-echo`, `registry.k8s.io/e2e-test-images/agnhost`, `nginxinc/nginx-unprivileged`.
 - Helm charts: `prometheus-community/kube-prometheus-stack`, `podinfo/podinfo` (Session 15 practice), Argo CD official install manifests.
 - Terraform modules: `terraform-aws-modules/vpc/aws`, `terraform-aws-modules/eks/aws`.
-- Tools: Minikube, kind, kubectl, Helm, Terraform, AWS CLI, Trivy, Gitleaks, Bandit, Semgrep, pip-audit, Playwright (headless Chromium, used to capture the UI screenshots and the browser test video).
+- Tools: Minikube, kind, kubectl, Helm, Terraform, AWS CLI, Trivy, Gitleaks, Bandit, Semgrep, pip-audit, Playwright (headless Chromium, used to capture the UI screenshots and run the browser test).
 
 ## Official documentation I read
 Kubernetes (kubernetes.io/docs), Helm (helm.sh/docs), Docker (docs.docker.com), GitHub Actions and Packages (docs.github.com), Terraform (developer.hashicorp.com/terraform), AWS EKS / S3 / VPC / IAM user guides, Prometheus, Grafana, Argo CD and Trivy docs.
