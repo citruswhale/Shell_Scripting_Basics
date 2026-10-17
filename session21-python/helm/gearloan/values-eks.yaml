@@ -13,13 +13,13 @@ image:
 # pipeline run on master has to replace it before Argo CD can start the pods.
 backend:
   image:
-    tag: "cea8e2ad1b55f0c998cb95514866813baf62c765" # ci:backend-tag
+    tag: "d2500b57ec228d5213a477a63918f83c1545d403" # ci:backend-tag
   # Shown by /api/info, e.g. 1.0.0-abc1234 (chart appVersion + short SHA)
-  appVersion: "1.0.0-cea8e2a" # ci:backend-version
+  appVersion: "1.1.0-d2500b5" # ci:backend-version
 
 frontend:
   image:
-    tag: "cea8e2ad1b55f0c998cb95514866813baf62c765" # ci:frontend-tag
+    tag: "d2500b57ec228d5213a477a63918f83c1545d403" # ci:frontend-tag
 # ---- end of CI managed fields ----
 
 postgres:
